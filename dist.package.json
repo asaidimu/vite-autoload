@@ -1,0 +1,28 @@
+{
+  "name": "@asaidimu/vite-autoload",
+  "version": "1.0.0",
+  "description": "Autoloader for vite",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "./*"
+  ],
+  "keywords": [
+    "typescript"
+  ],
+  "author": "Saidimu <47994458+asaidimu@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asaidimu/vite-autoload.git"
+  },
+  "bugs": {
+    "url": "https://github.com/asaidimu/vite-autoload/issues"
+  },
+  "homepage": "https://github.com/asaidimu/vite-autoload#readme",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "tag": "latest",
+    "access": "public"
+  }
+}
