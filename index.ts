@@ -1,4 +1,4 @@
 export * from "./src/core/plugin"
 
-export type { PluginOptions, RouteMetadata } from './src/core/types';
+export type { PluginOptions } from './src/core/types';
 

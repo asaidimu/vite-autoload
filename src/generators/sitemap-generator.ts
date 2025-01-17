@@ -1,8 +1,6 @@
-import type { RouteMetadata } from '../core/types';
-
-export interface SitemapEntry {
+export interface SitemapEntry<T = any> {
   readonly route: string;
-  readonly metadata?: RouteMetadata;
+  readonly metadata?: T;
 }
 
 interface SitemapUrl {
