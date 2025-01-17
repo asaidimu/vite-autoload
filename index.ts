@@ -1,6 +1,4 @@
+export * from "./src/core/plugin"
 
-function main(){
-  console.log("Hello, World!")
-}
+export type { PluginOptions, RouteMetadata } from './src/core/types';
 
-main()

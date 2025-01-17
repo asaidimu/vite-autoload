@@ -6,6 +6,7 @@ function updateDistPackage() {
 
   // Replace dependencies in dist.package.json
   distPackageJson.dependencies = packageJson.dependencies || {};
+  distPackageJson.devDependencies = packageJson.devDependencies || {};
 
   // Write back to dist.package.json
   writeFileSync("dist.package.json", JSON.stringify(distPackageJson, null, 2) + "\n");
