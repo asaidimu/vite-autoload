@@ -1,3 +1,10 @@
+## [1.0.3](https://github.com/asaidimu/vite-autoload/compare/v1.0.2...v1.0.3) (2025-01-18)
+
+
+### Bug Fixes
+
+* add left out feature ([e1bee3f](https://github.com/asaidimu/vite-autoload/commit/e1bee3f6e739c56218fe7d8aac7de934e3e1f3ce))
+
 ## [1.0.2](https://github.com/asaidimu/vite-autoload/compare/v1.0.1...v1.0.2) (2025-01-18)
 
 
