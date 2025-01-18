@@ -1,3 +1,11 @@
+## [1.0.2](https://github.com/asaidimu/vite-autoload/compare/v1.0.1...v1.0.2) (2025-01-18)
+
+
+### Bug Fixes
+
+* add tentative manifest generation ([b6d3547](https://github.com/asaidimu/vite-autoload/commit/b6d3547b2ac79ba88331ce9297b976ffe2f0064d))
+* remove incomplete package ([be282a0](https://github.com/asaidimu/vite-autoload/commit/be282a070f5940f718ffd26d16e8197f3f87defb))
+
 ## [1.0.1](https://github.com/asaidimu/vite-autoload/compare/v1.0.0...v1.0.1) (2025-01-18)
 
 
