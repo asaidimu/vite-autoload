@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/asaidimu/vite-autoload/compare/v1.0.0...v1.0.1) (2025-01-18)
+
+
+### Bug Fixes
+
+* fixed a minor bug in path generation ([9476bd0](https://github.com/asaidimu/vite-autoload/commit/9476bd0bc3e8ad25d19852942e0a1b3f7ef6831b))
+
 # 1.0.0 (2025-01-17)
 
 
