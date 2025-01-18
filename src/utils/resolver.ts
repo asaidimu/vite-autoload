@@ -20,7 +20,7 @@ export function resolve(config: FileMatchConfig): Array<ResolvedFile> {
     const relativePath = path.relative(config.directory, file);
     return {
       path: relativePath,
-      uri: `/${path.join(config.directory, relativePath)}`,
+      uri: path.join(config.directory, relativePath),
       file,
     };
   });

@@ -71,7 +71,6 @@ export function createModuleGenerator(options: GeneratorOptions) {
       {} as Record<string, Array<any>>,
     );
 
-    console.log({ routeData });
     return routeData;
   }
 
