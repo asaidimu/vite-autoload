@@ -1,6 +1,6 @@
-import type { z } from 'zod';
+import type { z } from "zod";
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export interface FileMatchConfig {
   readonly directory: string;
@@ -20,7 +20,9 @@ export interface ExtractOptions {
   readonly name: string;
 }
 
-export type ExtractFunction = (options: ExtractOptions) => Record<string, unknown>;
+export type ExtractFunction = (
+  options: ExtractOptions,
+) => Record<string, unknown>;
 
 export interface TransformConfig<T, R> {
   readonly input: FileMatchConfig;
@@ -34,8 +36,9 @@ export interface TransformConfig<T, R> {
   };
   readonly transform?: (
     item: ResolvedFile,
-    context: TransformContext<T> | Record<string, Array<{ module: string }>>
+    context: TransformContext<T> | Record<string, Array<{ module: string }>>,
   ) => R;
+  readonly importers?: string[]; // Files that should be connected to these modules
 }
 
 export interface RouteData<T = any> {
@@ -52,14 +55,8 @@ export interface ResolvedRouteModule {
 }
 
 export interface RoutesConfig {
-  readonly views: TransformConfig<
-    ResolvedRouteModule,
-    RouteData
-  >;
-  readonly pages: TransformConfig<
-    ResolvedRouteModule,
-    RouteData
-  >;
+  readonly views: TransformConfig<ResolvedRouteModule, RouteData>;
+  readonly pages: TransformConfig<ResolvedRouteModule, RouteData>;
 }
 
 export interface ModulesConfig {
@@ -88,21 +85,21 @@ export interface ManifestConfig {
   readonly description?: string;
   readonly theme_color?: string;
   readonly background_color?: string;
-  readonly display?: 'fullscreen' | 'standalone' | 'minimal-ui' | 'browser';
-  readonly orientation?: 'any' | 'natural' | 'landscape' | 'portrait';
+  readonly display?: "fullscreen" | "standalone" | "minimal-ui" | "browser";
+  readonly orientation?: "any" | "natural" | "landscape" | "portrait";
   readonly scope?: string;
   readonly start_url?: string;
   readonly icons?: Array<{
     src: string;
     sizes: string;
     type?: string;
-    purpose?: 'any' | 'maskable' | 'monochrome';
+    purpose?: "any" | "maskable" | "monochrome";
   }>;
   readonly screenshots?: Array<{
     src: string;
     sizes: string;
     type?: string;
-    platform?: 'wide' | 'narrow' | 'android' | 'ios' | 'windows';
+    platform?: "wide" | "narrow" | "android" | "ios" | "windows";
   }>;
   readonly related_applications?: Array<{
     platform: string;
@@ -111,7 +108,7 @@ export interface ManifestConfig {
   }>;
   readonly prefer_related_applications?: boolean;
   readonly categories?: Array<string>;
-  readonly dir?: 'auto' | 'ltr' | 'rtl';
+  readonly dir?: "auto" | "ltr" | "rtl";
   readonly lang?: string;
   readonly iarc_rating_id?: string;
   readonly output?: string;
@@ -127,7 +124,7 @@ export interface PluginOptions {
   readonly modules: ModulesConfig;
   readonly logLevel?: LogLevel;
   readonly extract?: ExtractFunction;
-  readonly chunkSize?: number
+  readonly chunkSize?: number;
 }
 
 export interface BuildContext {
@@ -150,7 +147,7 @@ export interface RouteGeneratorResult {
 }
 
 export interface ResolvedFile {
-    uri: string
-    path: string
-    file: string
+  uri: string;
+  path: string;
+  file: string;
 }

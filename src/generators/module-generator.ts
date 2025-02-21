@@ -1,4 +1,4 @@
-import type { ResolvedRouteModule, TransformConfig } from "../core/types";
+import type { ResolvedRouteModule, RouteData, TransformConfig } from "../core/types";
 import { resolve } from "../utils/resolver";
 import { generateMd5Hash } from "../utils/crypto";
 
@@ -47,7 +47,7 @@ export function createModuleGenerator(options: GeneratorOptions) {
     return data;
   }
 
-  function data({ production }: { production: boolean }): any {
+  function data({ production }: { production: boolean })  {
     const routeData = Array.from(cache.values()).reduce(
       (acc, current) => {
         const { module, ...value } = current;
@@ -65,10 +65,10 @@ export function createModuleGenerator(options: GeneratorOptions) {
             name === "modules" ? { views: acc.views || [] } : { views: [] };
           result = config[module].transform(result, context);
         }
-        acc[module].push(result);
+        acc[module].push(result as any);
         return acc;
       },
-      {} as Record<string, Array<any>>,
+      {} as Record<string, Array<RouteData>>,
     );
 
     return routeData;

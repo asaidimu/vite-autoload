@@ -18,9 +18,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-    "outDir": "./dist"
+    "noUncheckedSideEffectImports": true
   },
-  "include": ["src/**/*", "./index.ts", "ui/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "./example.config.ts", "./src/manifest"]
+  "include": ["src"]
 }

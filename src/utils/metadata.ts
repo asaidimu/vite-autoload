@@ -355,7 +355,7 @@ export function createMetadataExtractor(schema: z.ZodType, options: { exportName
 
         return result.data;
       } catch (error) {
-        console.warn(`Error processing ${filePath}:`);
+        // console.warn(`Error processing ${filePath}:`);
         return null
       }
     },
