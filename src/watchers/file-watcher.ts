@@ -12,7 +12,7 @@ export interface FileWatcherApi {
 export function createFileWatcher(
   options: PluginOptions,
   logger: Logger,
-  onChange: () => Promise<void>
+  onChange: (props:any) => Promise<void>
 ): FileWatcherApi {
   let watcher: chokidar.FSWatcher | null = null;
 
@@ -23,7 +23,7 @@ export function createFileWatcher(
   ].filter(Boolean); // Remove any undefined directories
 
   // Get the types file path if it exists
-  const typesFile = options.export?.types 
+  const typesFile = options.export?.types
     ? path.join(options.rootDir || process.cwd(), options.export.types)
     : null;
 
@@ -31,10 +31,10 @@ export function createFileWatcher(
   let isProcessing = false;
   const debouncedOnChange = debounce(async () => {
     if (isProcessing) return;
-    
+
     try {
       isProcessing = true;
-      await onChange();
+      await onChange([]);
     } finally {
       isProcessing = false;
     }
