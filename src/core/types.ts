@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
+export type Environment = "build" | "dev";
 
 export interface FileMatchConfig {
   readonly directory: string;
@@ -12,6 +13,8 @@ export interface FileMatchConfig {
 
 export interface TransformContext<T> {
   readonly views: ReadonlyArray<T>;
+  readonly environment?: Environment;
+  readonly emitFile?: (fileName: string, source: string) => void;
 }
 
 export interface ExtractOptions {
@@ -129,6 +132,7 @@ export interface PluginOptions {
 
 export interface BuildContext {
   readonly production: boolean;
+  readonly environment?: Environment;
   readonly name?: string;
   readonly split?: boolean;
 }

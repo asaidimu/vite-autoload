@@ -1,5 +1,5 @@
 import path from "path";
-import type { Plugin, ResolvedConfig, Update, ViteDevServer } from "vite";
+import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 import { createModuleGenerator } from "../generators/module-generator";
 import { generateSitemap } from "../generators/sitemap-generator";
 import { generateTypes } from "../generators/types-generator";
@@ -22,11 +22,14 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
   const logger = createLogger(options.logLevel);
 
   // Maps file paths to their virtual module metadata for runtime tracking
-  const fileToExportMap = new Map<string, {
-    virtualModule: string;
-    exportKey: string;
-    index: number;
-  }>();
+  const fileToExportMap = new Map<
+    string,
+    {
+      virtualModule: string;
+      exportKey: string;
+      index: number;
+    }
+  >();
 
   // Maps virtual module IDs to their data hash for change detection
   const virtualModuleCache = new Map<string, string>();
@@ -111,7 +114,9 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       mapRoutes(routeData.pages, "virtual:routes", "pages");
 
     // Map module dependencies
-    for (const [key, moduleEntries] of Object.entries(modules.data({ production: false }))) {
+    for (const [key, moduleEntries] of Object.entries(
+      modules.data({ production: false }),
+    )) {
       if (Array.isArray(moduleEntries)) {
         moduleEntries.forEach((entry, index) => {
           if (entry?.path) {
@@ -128,99 +133,108 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
   };
 
   // File watcher for regenerating types on filesystem changes
-  const fileWatcher = createFileWatcher(options, logger, async (changedFiles) => {
-    if (!server && !config.isProduction) return;
+  const fileWatcher = createFileWatcher(
+    options,
+    logger,
+    async (changedFiles) => {
+      if (!server && !config.isProduction) return;
 
-    logger.debug(`Files changed: ${changedFiles.join(', ')}`);
+      logger.debug(`Files changed: ${changedFiles.join(", ")}`);
 
-    // Detect which virtual modules need updates
-    const changedVirtualModules = new Set<string>();
+      // Detect which virtual modules need updates
+      const changedVirtualModules = new Set<string>();
 
-    // Check if routes or modules have changed
-    if (hasVirtualModuleChanged("routes", routes)) {
-      changedVirtualModules.add("virtual:routes");
-    }
-
-    for (const moduleName of Object.keys(modules.data({ production: false }))) {
-      if (hasVirtualModuleChanged(moduleName, modules)) {
-        changedVirtualModules.add(`virtual:${moduleName}`);
+      // Check if routes or modules have changed
+      if (hasVirtualModuleChanged("routes", routes)) {
+        changedVirtualModules.add("virtual:routes");
       }
-    }
 
-    // Update dependency mappings
-    updateDependencyMappings();
+      for (const moduleName of Object.keys(
+        modules.data({ production: false }),
+      )) {
+        if (hasVirtualModuleChanged(moduleName, modules)) {
+          changedVirtualModules.add(`virtual:${moduleName}`);
+        }
+      }
 
-    // Trigger HMR updates in development mode
-    if (server && changedVirtualModules.size > 0) {
-      const moduleGraph = server.moduleGraph;
+      // Update dependency mappings
+      updateDependencyMappings();
 
-      for (const moduleName of changedVirtualModules) {
-        const virtualId = `\0${moduleName}`;
-        const mod = moduleGraph.getModuleById(virtualId);
+      // Trigger HMR updates in development mode
+      if (server && changedVirtualModules.size > 0) {
+        const moduleGraph = server.moduleGraph;
 
-        if (mod) {
-          moduleGraph.invalidateModule(mod);
-          // Invalidate all importers
-          const affectedModules = new Set([mod]);
+        for (const moduleName of changedVirtualModules) {
+          const virtualId = `\0${moduleName}`;
+          const mod = moduleGraph.getModuleById(virtualId);
 
-          mod.importers.forEach(importer => {
-            moduleGraph.invalidateModule(importer);
-            affectedModules.add(importer);
-          });
+          if (mod) {
+            moduleGraph.invalidateModule(mod);
+            // Invalidate all importers
+            const affectedModules = new Set([mod]);
 
-          // Send HMR update
-          if (affectedModules.size > 0) {
-            logger.info(`Sending HMR update for ${moduleName} (affecting ${affectedModules.size} modules)`);
-            server.hot.send({
-              type: "update",
-              updates: Array.from(affectedModules).map(m => ({
-                type: "js-update",
-                timestamp: Date.now(),
-                path: m.id || m.file,
-                acceptedPath: m.id || m.file
-              } as Update))
+            mod.importers.forEach((importer) => {
+              moduleGraph.invalidateModule(importer);
+              affectedModules.add(importer);
             });
+
+            // Send HMR update
+            if (affectedModules.size > 0) {
+              logger.info(
+                `Sending HMR update for ${moduleName} (affecting ${affectedModules.size} modules)`,
+              );
+              /* @ts-ignore */
+              server.hot.send({
+                type: "update",
+                updates: Array.from(affectedModules).map((m) => ({
+                  type: "js-update",
+                  timestamp: Date.now(),
+                  path: m.id || m.file,
+                  acceptedPath: m.id || m.file,
+                })),
+              });
+            }
           }
         }
       }
-    }
 
-    // Generate types if enabled
-    if (options.export?.types) {
-      try {
-        const output = path.join(
-          options.rootDir || process.cwd(),
-          options.export.types,
-        );
-        const routeLimit = options.export?.routeLimit || 1000;
-        const routeData = routes.data({ production: false });
-        const types = {
-          ApplicationRoute: Object.values(routeData)
-            .flat()
-            .filter((r) => !!r?.route)
-            .slice(0, routeLimit)
-            .map((r) => r.route),
-        };
+      // Generate types if enabled
+      if (options.export?.types) {
+        try {
+          const output = path.join(
+            options.rootDir || process.cwd(),
+            options.export.types,
+          );
+          const routeLimit = options.export?.routeLimit || 1000;
+          const routeData = routes.data({ production: false });
+          const types = {
+            ApplicationRoute: Object.values(routeData)
+              .flat()
+              .filter((r) => !!r?.route)
+              .slice(0, routeLimit)
+              .map((r) => r.route),
+          };
 
-        for (const [key, value] of Object.entries(
-          modules.data({ production: false }),
-        )) {
-          const type = options.modules[key]?.output?.types;
-          if (type) {
-            const { name, key: prop } = type;
-            (types as any)[name] = (value as any[]).map((m) => m[prop]);
+          for (const [key, value] of Object.entries(
+            modules.data({ production: false }),
+          )) {
+            const type = options.modules[key]?.output?.types;
+            if (type) {
+              const { name, key: prop } = type;
+              (types as any)[name] = (value as any[]).map((m) => m[prop]);
+            }
           }
-        }
 
-        await generateTypes(output, types);
-        logger.info(
-          `Types generated successfully (processed ${types.ApplicationRoute.length} routes)`,
-        );
-      } catch (error) {
-        logger.error("Failed to generate types:", error);
+          await generateTypes(output, types);
+          logger.info(
+            `Types generated successfully (processed ${types.ApplicationRoute.length} routes)`,
+          );
+        } catch (error) {
+          logger.error("Failed to generate types:", error);
+        }
       }
-    }
-  });
+    },
+  );
 
   return {
     name: "vite-plugin-autoload",
@@ -245,7 +259,10 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
         const data = modules.data({ production: false })[name];
         virtualModuleCache.set(name, getDataHash(data));
       }
-      virtualModuleCache.set("routes", getDataHash(routes.data({ production: false })));
+      virtualModuleCache.set(
+        "routes",
+        getDataHash(routes.data({ production: false })),
+      );
 
       // Initialize dependency mappings
       updateDependencyMappings();
@@ -364,15 +381,15 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
         // List all virtual module IDs from handlers
         const virtualModuleIds = [
           ...Object.keys(modules.data({ production: false })).map(
-            (key) => `virtual:${key}`
+            (key) => `virtual:${key}`,
           ),
-          "virtual:routes"
+          "virtual:routes",
         ];
 
         const importedVirtualIds = imports
           .map((imp) => imp.n)
           .filter(
-            (importName) => importName && virtualModuleIds.includes(importName)
+            (importName) => importName && virtualModuleIds.includes(importName),
           ) as Array<string>;
 
         if (importedVirtualIds.length > 0) {
@@ -430,7 +447,7 @@ if (import.meta.hot) {
       const mapping = fileToExportMap.get(normalizedFile);
       if (!mapping) return;
 
-      const { virtualModule } = mapping;
+      const { virtualModule  } = mapping;
       logger.debug(`HMR: File ${normalizedFile} mapped to ${virtualModule}`);
 
       // Find the affected module node
@@ -446,12 +463,14 @@ if (import.meta.hot) {
       server.moduleGraph.invalidateModule(moduleNode);
 
       const affectedModules = new Set([moduleNode]);
-      moduleNode.importers.forEach(importer => {
+      moduleNode.importers.forEach((importer) => {
         server.moduleGraph.invalidateModule(importer);
         affectedModules.add(importer);
       });
 
-      logger.info(`HMR update triggered by ${file} modification (affecting ${affectedModules.size} modules)`);
+      logger.info(
+        `HMR update triggered by ${file} modification (affecting ${affectedModules.size} modules)`,
+      );
 
       return Array.from(affectedModules);
     },
