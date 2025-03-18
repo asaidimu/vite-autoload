@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/asaidimu/vite-autoload/compare/v1.0.4...v1.0.5) (2025-02-21)
+
+
+### Bug Fixes
+
+* fix build ([a52bf5a](https://github.com/asaidimu/vite-autoload/commit/a52bf5a81924cb1c7ec2dfc0a684062c895023bc))
+
 ## [1.0.4](https://github.com/asaidimu/vite-autoload/compare/v1.0.3...v1.0.4) (2025-02-21)
 
 
