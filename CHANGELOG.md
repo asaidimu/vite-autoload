@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/asaidimu/vite-autoload/compare/v1.0.6...v1.1.0) (2025-03-31)
+
+
+### Bug Fixes
+
+* fix types after refactor ([733863a](https://github.com/asaidimu/vite-autoload/commit/733863ad6bcc44bf16c6fe457aab651fa095680b))
+
+
+### Features
+
+* add ability to aggregate modules ([2f64e3d](https://github.com/asaidimu/vite-autoload/commit/2f64e3d721a865bba23235556998b9877210e890))
+
 ## [1.0.6](https://github.com/asaidimu/vite-autoload/compare/v1.0.5...v1.0.6) (2025-03-18)
 
 
