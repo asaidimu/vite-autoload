@@ -59,12 +59,12 @@ export interface ResolvedRouteModule {
 }
 
 export interface RoutesConfig {
-  readonly views: TransformConfig<ResolvedRouteModule, RouteData>;
-  readonly pages: TransformConfig<ResolvedRouteModule, RouteData>;
+  readonly views: TransformConfig<ResolvedRouteModule, RouteData, any>;
+  readonly pages: TransformConfig<ResolvedRouteModule, RouteData, any>;
 }
 
 export interface ModulesConfig {
-  readonly [key: string]: TransformConfig<unknown, unknown>;
+  readonly [key: string]: TransformConfig<unknown, unknown, unknown>;
 }
 
 export interface SitemapConfig {
