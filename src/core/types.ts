@@ -27,7 +27,7 @@ export type ExtractFunction = (
   options: ExtractOptions,
 ) => Record<string, unknown>;
 
-export interface TransformConfig<T, R> {
+export interface TransformConfig<T, R, A> {
   readonly input: FileMatchConfig;
   readonly output?: {
     readonly name: string;
@@ -41,6 +41,7 @@ export interface TransformConfig<T, R> {
     item: ResolvedFile,
     context: TransformContext<T> | Record<string, Array<{ module: string }>>,
   ) => R;
+  readonly aggregate?: (items: R[]) => A;
   readonly importers?: string[]; // Files that should be connected to these modules
 }
 

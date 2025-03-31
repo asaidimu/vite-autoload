@@ -4,7 +4,7 @@ import { generateMd5Hash } from "../utils/crypto";
 
 interface GeneratorOptions {
   name: string;
-  config: Record<string, TransformConfig<any, any>>;
+  config: Record<string, TransformConfig<any, any, any>>;
 }
 
 export function createModuleGenerator(options: GeneratorOptions) {
@@ -47,7 +47,7 @@ export function createModuleGenerator(options: GeneratorOptions) {
     return data;
   }
 
-  function data({ production }: { production: boolean })  {
+  function data({ production }: { production: boolean }) {
     const routeData = Array.from(cache.values()).reduce(
       (acc, current) => {
         const { module, ...value } = current;
@@ -70,6 +70,13 @@ export function createModuleGenerator(options: GeneratorOptions) {
       },
       {} as Record<string, Array<RouteData>>,
     );
+
+    // Apply aggregate function if available
+    for (const module of Object.keys(routeData)) {
+      if (config[module].aggregate) {
+        routeData[module] = config[module].aggregate(routeData[module]);
+      }
+    }
 
     return routeData;
   }
