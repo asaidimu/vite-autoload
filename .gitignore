@@ -143,3 +143,5 @@ coverage/
 .env
 *.log
 .DS_Store
+.readme.md
+.commit-message.md
