@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/asaidimu/vite-autoload/compare/v3.0.1...v3.1.0) (2025-06-28)
+
+
+### Features
+
+* **config:** introduce StrategyConfig interface ([5e65819](https://github.com/asaidimu/vite-autoload/commit/5e65819054633dca1f6b3673f3ac4dfe5406b5ff))
+
 ## [3.0.1](https://github.com/asaidimu/vite-autoload/compare/v3.0.0...v3.0.1) (2025-06-28)
 
 
