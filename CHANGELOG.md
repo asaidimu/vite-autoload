@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/asaidimu/vite-autoload/compare/v3.0.0...v3.0.1) (2025-06-28)
+
+
+### Bug Fixes
+
+* **hmr:** ensure full module graph invalidation ([a540ee8](https://github.com/asaidimu/vite-autoload/commit/a540ee88b14ac75c4f819f8681a610e50ec0a888))
+
 # [3.0.0](https://github.com/asaidimu/vite-autoload/compare/v2.1.2...v3.0.0) (2025-06-28)
 
 
