@@ -1,3 +1,13 @@
+# [2.0.0](https://github.com/asaidimu/vite-autoload/compare/v1.1.0...v2.0.0) (2025-06-28)
+
+
+* refactor(core)!: streamline plugin by removing experimental asset manifest ([ecfa791](https://github.com/asaidimu/vite-autoload/commit/ecfa791b463bb25b5c68b021fe5a0bcdae765711))
+
+
+### BREAKING CHANGES
+
+* The experimental Asset Manifest System, including its configuration options (e.g., app.manifest, caching, prefetch) and associated service worker logic, has been entirely removed. This feature was previously marked as Work in Progress and is no longer part of the plugin's scope. Users relying on this experimental functionality will need to remove related configurations and code.
+
 # [1.1.0](https://github.com/asaidimu/vite-autoload/compare/v1.0.6...v1.1.0) (2025-03-31)
 
 
