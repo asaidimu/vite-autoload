@@ -1,3 +1,21 @@
+# [3.0.0](https://github.com/asaidimu/vite-autoload/compare/v2.1.2...v3.0.0) (2025-06-28)
+
+
+* refactor(plugin)!: streamline module and route generator management ([27aaafb](https://github.com/asaidimu/vite-autoload/commit/27aaafbe904319a7e540af17ebae473ab83a4e82))
+* refactor(plugin)!: unexpose internal generator functions ([b1699c5](https://github.com/asaidimu/vite-autoload/commit/b1699c5e6b3bf6fa66f8addce14e1c730b8a46fb))
+
+
+### Bug Fixes
+
+* fix build errors ([9d09afe](https://github.com/asaidimu/vite-autoload/commit/9d09afef9291fe08bde4de846b2d6df8821b5020))
+
+
+### BREAKING CHANGES
+
+* The createModuleGenerator and createRouteGenerator functions are no longer directly importable from @asaidimu/vite-autoload. Any code directly importing these functions will break.
+Users should interact with the plugin solely through the createAutoloadPlugin function.
+* The `generator` property within `routes` and individual `modules` configuration objects in `PluginOptions` has been removed. Any custom generator functions previously supplied via this property will no longer be supported. Users must remove this property from their `autoload.config.ts` or similar configuration files, as the plugin now exclusively utilizes its built-in, unified module generation logic.
+
 ## [2.1.2](https://github.com/asaidimu/vite-autoload/compare/v2.1.1...v2.1.2) (2025-06-28)
 
 
