@@ -1,6 +1,3 @@
-# [2.1.0](https://github.com/asaidimu/vite-autoload/compare/v2.0.0...v2.1.0) (2025-06-28)
-
-
 ### Features
 
 * **generators:** Introduce pluggable system for virtual module generation ([5eff1d4](https://github.com/asaidimu/vite-autoload/commit/5eff1d4be7b201a188a5f531ab1107ae2d28e687))
