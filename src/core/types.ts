@@ -155,3 +155,21 @@ export interface ResolvedFile {
   path: string;
   file: string;
 }
+
+export interface StrategyConfig {
+  mapping: {
+    id?: string;
+    strategy: "unified" | "split";
+    collections: string[];
+  };
+  outputs?: {
+    types?: {
+      name: string;
+      property: string;
+    };
+    sitemap?: {
+      enabled: boolean;
+      property: string;
+    };
+  };
+}
