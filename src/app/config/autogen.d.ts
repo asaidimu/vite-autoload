@@ -1,1 +1,0 @@
-export type ApplicationRoute = 'app' | 'counter' | 'main' | 'vite-env.d';

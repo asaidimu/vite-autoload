@@ -53,7 +53,7 @@ export function createRouteGenerator(
   function getModules({ production }: { production: boolean }): ReadonlyArray<ResolvedRouteModule & { module: string }> {
     return Object.values(cache).map(value => {
       const result = { ...value };
-      const config = options.routes[value.module as keyof typeof options.routes];
+      const config:any = options.routes[value.module as keyof typeof options.routes];
 
       if (production) {
         result.uri = `${config.input.prefix || '/'}${generateMd5Hash(result.uri)}.js`;
@@ -76,7 +76,7 @@ export function createRouteGenerator(
         (acc[module as keyof RouteGeneratorResult] as RouteData[]) = [];
       }
 
-      const config = options.routes[module as keyof typeof options.routes];
+      const config:any = options.routes[module as keyof typeof options.routes];
       let result: RouteData = value as unknown as RouteData;
 
       if (config?.transform) {
