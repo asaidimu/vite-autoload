@@ -30,13 +30,18 @@ export function createFileWatcher(
   // Increase debounce time and add queue handling
   let isProcessing = false;
   const debouncedOnChange = debounce(async () => {
-    if (isProcessing) return;
+    if (isProcessing) {
+      logger.debug('File watcher: debouncedOnChange skipped, already processing.');
+      return;
+    }
 
+    logger.debug('File watcher: debouncedOnChange triggered.');
     try {
       isProcessing = true;
       await onChange([]);
     } finally {
       isProcessing = false;
+      logger.debug('File watcher: debouncedOnChange finished processing.');
     }
   }, options.watch?.debounceTime || 1000);
 

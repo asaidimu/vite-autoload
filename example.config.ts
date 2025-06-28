@@ -42,7 +42,6 @@ export default function createAutoloadConfig({
     },
     routes: {
       views: {
-        importers: ["./ui/main.ts"],
         input: {
           directory: "ui",
           match: ["*.ts"],

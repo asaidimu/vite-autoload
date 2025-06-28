@@ -1,14 +1,9 @@
-/* @ts-ignore */
-import { views } from "virtual:routes";
-
 export function setupCounter(element: HTMLButtonElement) {
-  let counter = 5
+  let counter = 0
   const setCounter = (count: number) => {
     counter = count
     element.innerHTML = `count is ${counter}`
   }
-  element.addEventListener('click', () => setCounter(counter + 1))
-
-  setCounter(1)
+  element.addEventListener('click', () => setCounter(counter + 3))
 }
 

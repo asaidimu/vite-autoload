@@ -9,6 +9,7 @@ import { createLogger } from "./logger";
 import { PluginOptions, RouteData } from "./types";
 import { init, parse as parseImports } from "es-module-lexer";
 import { normalizePath } from "vite";
+import { isJavaScriptLikeModule } from "../utils/checkers";
 
 /**
  * Creates a Vite plugin that autoloads and manages virtual modules based on filesystem data.
@@ -33,6 +34,12 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
 
   // Maps virtual module IDs to their data hash for change detection
   const virtualModuleCache = new Map<string, string>();
+
+  // Maps importer modules to their virtual module dependencies
+  const importerToVirtualDeps = new Map<string, Set<string>>();
+
+  // Maps virtual modules to their file dependencies
+  const virtualModuleDeps = new Map<string, Set<string>>();
 
   // Store resolved Vite config and dev server instance
   let config: ResolvedConfig;
@@ -83,6 +90,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
   const updateDependencyMappings = () => {
     logger.debug("Updating dependency mappings");
     fileToExportMap.clear();
+    virtualModuleDeps.clear();
 
     const routeData = routes.data({ production: false });
     const chunkSize = options.chunkSize || 100;
@@ -93,6 +101,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       virtualModule: string,
       exportKey: string,
     ) => {
+      const deps = new Set<string>();
       for (let i = 0; i < entries.length; i += chunkSize) {
         const chunk = entries.slice(i, i + chunkSize);
         chunk.forEach((entry, index) => {
@@ -103,9 +112,13 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
               exportKey,
               index: i + index,
             });
+            // Store absolute path for dependency tracking
+            const absolutePath = path.resolve(config?.root || process.cwd(), entry.path.slice(1));
+            deps.add(absolutePath);
           }
         });
       }
+      virtualModuleDeps.set(virtualModule, deps);
     };
 
     if (Array.isArray(routeData.views))
@@ -118,18 +131,52 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       modules.data({ production: false }),
     )) {
       if (Array.isArray(moduleEntries)) {
+        const deps = new Set<string>();
+        const virtualModule = `virtual:${key}`;
+
         moduleEntries.forEach((entry, index) => {
           if (entry?.path) {
             const normalizedPath = normalizePath(entry.path);
             fileToExportMap.set(normalizedPath, {
-              virtualModule: `virtual:${key}`,
+              virtualModule,
               exportKey: key,
               index,
             });
+            // Store absolute path for dependency tracking
+            const absolutePath = path.resolve(config?.root || process.cwd(), entry.path.slice(1));
+            deps.add(absolutePath);
           }
         });
+
+        virtualModuleDeps.set(virtualModule, deps);
       }
     }
+
+    logger.debug("Updated virtual module dependencies:", Array.from(virtualModuleDeps.keys()));
+  };
+
+  /**
+   * Establishes direct dependencies between an importer and all files in virtual modules it imports
+   */
+  const establishDirectDependencies = (importerId: string, virtualModuleIds: string[]) => {
+    if (!server) return;
+
+    // Track which virtual modules this importer depends on
+    if (!importerToVirtualDeps.has(importerId)) {
+      importerToVirtualDeps.set(importerId, new Set());
+    }
+
+    const importerVirtualDeps = importerToVirtualDeps.get(importerId)!;
+
+    virtualModuleIds.forEach(virtualId => {
+      importerVirtualDeps.add(virtualId);
+
+      // Get all file dependencies for this virtual module
+      const fileDeps = virtualModuleDeps.get(virtualId);
+      if (!fileDeps) return;
+    });
+
+    logger.debug(`Established dependencies for ${importerId}:`, Array.from(importerVirtualDeps));
   };
 
   // File watcher for regenerating types on filesystem changes
@@ -160,7 +207,8 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       // Update dependency mappings
       updateDependencyMappings();
 
-      // Trigger HMR updates in development mode
+      // Trigger HMR updates in development mode ONLY for virtual module content changes
+      // (i.e., when routes are added/removed, not when individual route files change)
       if (server && changedVirtualModules.size > 0) {
         const moduleGraph = server.moduleGraph;
 
@@ -170,7 +218,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
 
           if (mod) {
             moduleGraph.invalidateModule(mod);
-            // Invalidate all importers
+            // Invalidate all importers of the virtual module
             const affectedModules = new Set([mod]);
 
             mod.importers.forEach((importer) => {
@@ -181,7 +229,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
             // Send HMR update
             if (affectedModules.size > 0) {
               logger.info(
-                `Sending HMR update for ${moduleName} (affecting ${affectedModules.size} modules)`,
+                `Sending HMR update for ${moduleName} structure change (affecting ${affectedModules.size} modules)`,
               );
               /* @ts-ignore */
               server.hot.send({
@@ -352,7 +400,8 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     },
 
     /**
-     * Transforms modules that import virtual modules, adding proper HMR support.
+     * Transforms modules that import virtual modules, establishing direct dependencies
+     * for proper HMR behavior.
      * @param {string} code - The module's source code.
      * @param {string} id - The module's ID.
      * @returns {object|null} Transformed code with HMR or null if no transformation.
@@ -369,7 +418,8 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
         id.startsWith("\0") ||
         !server ||
         config.command !== "serve" ||
-        code.includes("import.meta.hot")
+        code.includes("// vite-plugin-autoload: HMR handling") ||
+        !isJavaScriptLikeModule(id)
       ) {
         return null;
       }
@@ -393,33 +443,29 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
           ) as Array<string>;
 
         if (importedVirtualIds.length > 0) {
-          // Collect dependencies for watching
+          logger.debug(`Module ${id} imports virtual modules:`, importedVirtualIds);
+
+          // Establish direct dependencies
+          establishDirectDependencies(id, importedVirtualIds);
+
+          // Add watch files for all dependencies of the imported virtual modules
           importedVirtualIds.forEach((virtualId) => {
-            const name = virtualId.replace("virtual:", "");
-            const handler = handlers.find((h) => h.find(name));
-            if (!handler) return;
-
-            const handlerData = handler.data({ production: false });
-            const dataEntry = handlerData[name] || handlerData;
-            const depFiles = Array.isArray(dataEntry)
-              ? dataEntry.map((entry) => entry.path).filter(Boolean)
-              : [];
-
-            depFiles.forEach((file) => {
-              if (file) {
-                const absolutePath = path.resolve(config.root, file.slice(1));
-                this.addWatchFile(absolutePath);
-              }
-            });
+            const fileDeps = virtualModuleDeps.get(virtualId);
+            if (fileDeps) {
+              fileDeps.forEach((filePath) => {
+                this.addWatchFile(filePath);
+                logger.debug(`Added watch file: ${filePath} for importer: ${id}`);
+              });
+            }
           });
 
-          // Add proper HMR handling code that won't conflict with other libraries
+          // Add minimal HMR code that doesn't interfere with natural HMR
           const hmrCode = `
 // vite-plugin-autoload: HMR handling
 if (import.meta.hot) {
-  import.meta.hot.accept((newModule) => {
-    // Let the module update naturally without custom handling
-    // This prevents conflicts with other HMR handlers
+  // Accept updates to this module - let Vite handle the rest
+  import.meta.hot.accept(() => {
+    // Natural HMR will reload this module when its dependencies change
   });
 }
 `;
@@ -436,43 +482,49 @@ if (import.meta.hot) {
     },
 
     /**
-     * Handles file changes, regenerating handlers and triggering HMR for affected virtual modules.
-     * This handles content modifications (not additions/deletions, which are handled by fileWatcher).
+     * Handles file changes for route modules, ensuring they trigger HMR for their importers
+     * without invalidating the virtual module itself.
      */
     handleHotUpdate({ file, server }) {
-      // This handles modifications to existing files
       const normalizedFile = normalizePath(path.resolve(file));
+      logger.debug(`handleHotUpdate: Processing file change: ${normalizedFile}`);
 
-      // Check if the modified file is mapped to a virtual module
+      // Check if this file is a dependency of any virtual module
       const mapping = fileToExportMap.get(normalizedFile);
-      if (!mapping) return;
-
-      const { virtualModule  } = mapping;
-      logger.debug(`HMR: File ${normalizedFile} mapped to ${virtualModule}`);
-
-      // Find the affected module node
-      const moduleId = `\0${virtualModule}`;
-      const moduleNode = server.moduleGraph.getModuleById(moduleId);
-
-      if (!moduleNode) {
-        logger.debug(`No module node found for ${moduleId}`);
+      if (!mapping) {
+        logger.debug(`File ${normalizedFile} is not tracked by any virtual module`);
         return;
       }
 
-      // Invalidate the module and all its importers
-      server.moduleGraph.invalidateModule(moduleNode);
+      logger.debug(`File ${normalizedFile} is tracked by virtual module: ${mapping.virtualModule}`);
 
-      const affectedModules = new Set([moduleNode]);
-      moduleNode.importers.forEach((importer) => {
-        server.moduleGraph.invalidateModule(importer);
-        affectedModules.add(importer);
-      });
+      // Find all modules that import virtual modules containing this file
+      const affectedModules = new Set();
 
-      logger.info(
-        `HMR update triggered by ${file} modification (affecting ${affectedModules.size} modules)`,
-      );
+      for (const [importerId, virtualDeps] of importerToVirtualDeps.entries()) {
+        if (virtualDeps.has(mapping.virtualModule)) {
+          const importerModule = server.moduleGraph.getModuleById(importerId);
+          if (importerModule) {
+            logger.debug(`Adding affected importer: ${importerId}`);
+            affectedModules.add(importerModule);
 
-      return Array.from(affectedModules);
+            // Also invalidate the importer module
+            server.moduleGraph.invalidateModule(importerModule);
+          }
+        }
+      }
+
+      if (affectedModules.size > 0) {
+        logger.info(
+          `HMR: File ${path.basename(file)} changed, updating ${affectedModules.size} importer modules (bypassing virtual module)`
+        );
+
+        // Return the affected modules for Vite to handle the HMR update
+        return Array.from(affectedModules) as any;
+      }
+
+      logger.debug(`No affected modules found for file: ${normalizedFile}`);
+      return;
     },
 
     /**

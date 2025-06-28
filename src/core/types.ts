@@ -42,7 +42,6 @@ export interface TransformConfig<T, R, A> {
     context: TransformContext<T> | Record<string, Array<{ module: string }>>,
   ) => R;
   readonly aggregate?: (items: R[]) => A;
-  readonly importers?: string[]; // Files that should be connected to these modules
 }
 
 export interface RouteData<T = any> {
