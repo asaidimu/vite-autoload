@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/asaidimu/vite-autoload/compare/v2.1.0...v2.1.1) (2025-06-28)
+
+
+### Bug Fixes
+
+* **revert:** Revert to stable version v2.0.0 source ([c81cc17](https://github.com/asaidimu/vite-autoload/commit/c81cc177ef61bbf656659177a1f91089ba674930))
+
 ### Features
 
 * **generators:** Introduce pluggable system for virtual module generation ([5eff1d4](https://github.com/asaidimu/vite-autoload/commit/5eff1d4be7b201a188a5f531ab1107ae2d28e687))
