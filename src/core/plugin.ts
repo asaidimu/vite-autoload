@@ -189,8 +189,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     logger.debug(`Established dependencies for ${importerId}:`, Array.from(importerVirtualDeps));
   };
 
-  // File watcher for regenerating types on filesystem changes
-  const fileWatcher = createFileWatcher(
+     const fileWatcher = createFileWatcher(
     options,
     logger,
     async (changedFiles) => {
@@ -211,76 +210,75 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       // Update dependency mappings
       updateDependencyMappings();
 
-      // Trigger HMR updates in development mode ONLY for virtual module content changes
-      if (server && changedVirtualModules.size > 0) {
-        const moduleGraph = server.moduleGraph;
+      // Trigger HMR and type generation ONLY if virtual module content has changed
+      if (changedVirtualModules.size > 0) {
+        // HMR updates in development mode
+        if (server) {
+          const moduleGraph = server.moduleGraph;
 
-        for (const moduleName of changedVirtualModules) {
-          const virtualId = `\0${moduleName}`;
-          const mod = moduleGraph.getModuleById(virtualId);
+          for (const moduleName of changedVirtualModules) {
+            const virtualId = `\0${moduleName}`;
+            const mod = moduleGraph.getModuleById(virtualId);
 
-          if (mod) {
-            moduleGraph.invalidateModule(mod);
-            // Invalidate all importers of the virtual module
-            const affectedModules = new Set([mod]);
+            if (mod) {
+              moduleGraph.invalidateModule(mod);
+              const affectedModules = new Set([mod]);
 
-            mod.importers.forEach((importer) => {
-              moduleGraph.invalidateModule(importer);
-              affectedModules.add(importer);
-            });
-
-            // Send HMR update
-            if (affectedModules.size > 0) {
-              logger.info(
-                `Sending HMR update for ${moduleName} structure change (affecting ${affectedModules.size} modules)`,
-              );
-              /* @ts-ignore */
-              server.hot.send({
-                type: "update",
-                updates: Array.from(affectedModules).map((m) => ({
-                  type: "js-update",
-                  timestamp: Date.now(),
-                  path: m.id || m.file,
-                  acceptedPath: m.id || m.file,
-                })),
+              mod.importers.forEach((importer) => {
+                moduleGraph.invalidateModule(importer);
+                affectedModules.add(importer);
               });
+
+              if (affectedModules.size > 0) {
+                logger.info(
+                  `Sending HMR update for ${moduleName} structure change (affecting ${affectedModules.size} modules)`,
+                );
+                /* @ts-ignore */
+                server.hot.send({
+                  type: "update",
+                  updates: Array.from(affectedModules).map((m) => ({
+                    type: "js-update",
+                    timestamp: Date.now(),
+                    path: m.id || m.file,
+                    acceptedPath: m.id || m.file,
+                  })),
+                });
+              }
             }
           }
         }
-      }
 
-      // Generate types if enabled
-      if (options.export?.types) {
-        try {
-          const output = path.join(
-            options.rootDir || process.cwd(),
-            options.export.types,
-          );
-          const routeLimit = options.export?.routeLimit || 1000;
+        // Generate types only when there's a change
+        if (options.export?.types) {
+          try {
+            const output = path.join(
+              options.rootDir || process.cwd(),
+              options.export.types,
+            );
+            const routeLimit = options.export?.routeLimit || 1000;
 
-          // Collect types from all generators
-          const types: Record<string, string[]> = {};
+            const types: Record<string, string[]> = {};
 
-          internalGenerators.forEach(internalGen => {
-            if (internalGen.generator.typesExtractor) {
-              const rawData = internalGen.legacyGenerator.data({ production: false });
-              const extractedData = internalGen.generator.dataExtractor(rawData, false);
-              const generatorTypes = internalGen.generator.typesExtractor(extractedData);
-              Object.assign(types, generatorTypes);
+            internalGenerators.forEach(internalGen => {
+              if (internalGen.generator.typesExtractor) {
+                const rawData = internalGen.legacyGenerator.data({ production: false });
+                const extractedData = internalGen.generator.dataExtractor(rawData, false);
+                const generatorTypes = internalGen.generator.typesExtractor(extractedData);
+                Object.assign(types, generatorTypes);
+              }
+            });
+
+            if (types.ApplicationRoute) {
+              types.ApplicationRoute = types.ApplicationRoute.slice(0, routeLimit);
             }
-          });
 
-          // Apply route limit to ApplicationRoute if it exists
-          if (types.ApplicationRoute) {
-            types.ApplicationRoute = types.ApplicationRoute.slice(0, routeLimit);
+            await generateTypes(output, types);
+            logger.info(
+              `Types generated successfully (processed ${types.ApplicationRoute?.length || 0} routes)`,
+            );
+          } catch (error) {
+            logger.error("Failed to generate types:", error);
           }
-
-          await generateTypes(output, types);
-          logger.info(
-            `Types generated successfully (processed ${types.ApplicationRoute?.length || 0} routes)`,
-          );
-        } catch (error) {
-          logger.error("Failed to generate types:", error);
         }
       }
     },

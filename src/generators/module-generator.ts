@@ -1,4 +1,8 @@
-import type { ResolvedRouteModule, RouteData, TransformConfig } from "../core/types";
+import type {
+  ResolvedRouteModule,
+  RouteData,
+  TransformConfig,
+} from "../core/types";
 import { resolve } from "../utils/resolver";
 import { generateMd5Hash } from "../utils/crypto";
 
@@ -15,6 +19,7 @@ export function createModuleGenerator(options: GeneratorOptions) {
 
   function init() {
     for (const [key, value] of Object.entries(options.config)) {
+      if (!value.input) continue;
       const { data: _, ...config } = value.input;
       const resolved = resolve(config);
       for (const entry of resolved) {
