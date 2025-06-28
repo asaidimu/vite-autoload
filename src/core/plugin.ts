@@ -6,21 +6,10 @@ import { generateTypes } from "../generators/types-generator";
 import { generateManifest } from "../generators/manifest-generator";
 import { createFileWatcher } from "../watchers/file-watcher";
 import { createLogger } from "./logger";
-import { PluginOptions, GeneratorDefinition } from "./types";
-import { defaultRoutesGenerator, createDefaultModuleGenerator } from "./generators";
+import { PluginOptions, RouteData } from "./types";
 import { init, parse as parseImports } from "es-module-lexer";
 import { normalizePath } from "vite";
 import { isJavaScriptLikeModule } from "../utils/checkers";
-
-/**
- * Internal wrapper that combines the legacy module generator with the new generator system
- */
-interface InternalGenerator {
-  name: string;
-  virtualId: string;
-  generator: GeneratorDefinition;
-  legacyGenerator: any; // The createModuleGenerator result
-}
 
 /**
  * Creates a Vite plugin that autoloads and manages virtual modules based on filesystem data.
@@ -56,38 +45,19 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
   let config: ResolvedConfig;
   let server: ViteDevServer;
 
-  // Create internal generators from config
-  const internalGenerators: InternalGenerator[] = [];
+  // Initialize module generators for "modules" and "routes"
+  const modules = createModuleGenerator({
+    name: "modules",
+    config: options.modules,
+  });
 
-  // Setup routes generator
-  const routesGenerator = options.routes.generator || defaultRoutesGenerator;
-  const routesLegacyGenerator = createModuleGenerator({
+  const routes = createModuleGenerator({
     name: "routes",
     config: options.routes as any,
   });
 
-  internalGenerators.push({
-    name: "routes",
-    virtualId: routesGenerator.virtualId || "virtual:routes",
-    generator: routesGenerator,
-    legacyGenerator: routesLegacyGenerator
-  });
-
-  // Setup module generators
-  Object.entries(options.modules).forEach(([key, moduleConfig]) => {
-    const generator = moduleConfig.generator || createDefaultModuleGenerator(key);
-    const legacyGenerator = createModuleGenerator({
-      name: key,
-      config: moduleConfig as any,
-    });
-
-    internalGenerators.push({
-      name: key,
-      virtualId: generator.virtualId || `virtual:${key}`,
-      generator,
-      legacyGenerator
-    });
-  });
+  // Array of all handlers for virtual module management
+  const handlers = [modules, routes];
 
   /**
    * Calculates a hash for module data to detect changes
@@ -99,16 +69,17 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
   /**
    * Detects if a virtual module's data has changed
    */
-  const hasVirtualModuleChanged = (internalGen: InternalGenerator): boolean => {
-    const currentData = internalGen.legacyGenerator.data({ production: false });
-    const extractedData = internalGen.generator.dataExtractor(currentData, false);
-    const currentHash = getDataHash(extractedData);
-    const previousHash = virtualModuleCache.get(internalGen.name);
+  const hasVirtualModuleChanged = (name: string, handler: any): boolean => {
+    const currentData = handler.data({ production: false });
+    const dataKey = name === "routes" ? "" : name;
+    const currentModule = currentData[dataKey] || currentData;
+    const currentHash = getDataHash(currentModule);
+    const previousHash = virtualModuleCache.get(name);
 
     const hasChanged = previousHash !== currentHash;
     if (hasChanged) {
-      virtualModuleCache.set(internalGen.name, currentHash);
-      logger.debug(`Virtual module ${internalGen.name} has changed`);
+      virtualModuleCache.set(name, currentHash);
+      logger.debug(`Virtual module ${name} has changed`);
     }
     return hasChanged;
   };
@@ -121,11 +92,12 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     fileToExportMap.clear();
     virtualModuleDeps.clear();
 
+    const routeData = routes.data({ production: false });
     const chunkSize = options.chunkSize || 100;
 
-    // Helper to map entries to their virtual modules
-    const mapEntries = (
-      entries: Array<any>,
+    // Helper to map routes to their virtual modules
+    const mapRoutes = (
+      entries: Array<RouteData>,
       virtualModule: string,
       exportKey: string,
     ) => {
@@ -141,7 +113,10 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
               index: i + index,
             });
             // Store absolute path for dependency tracking
-            const absolutePath = path.resolve(config?.root || process.cwd(), entry.path.slice(1));
+            const absolutePath = path.resolve(
+              config?.root || process.cwd(),
+              entry.path.slice(1),
+            );
             deps.add(absolutePath);
           }
         });
@@ -149,26 +124,53 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       virtualModuleDeps.set(virtualModule, deps);
     };
 
-    // Process all generators
-    internalGenerators.forEach(internalGen => {
-      const rawData = internalGen.legacyGenerator.data({ production: false });
-      const extractedData = internalGen.generator.dataExtractor(rawData, false);
+    if (Array.isArray(routeData.views))
+      mapRoutes(routeData.views, "virtual:routes", "views");
+    if (Array.isArray(routeData.pages))
+      mapRoutes(routeData.pages, "virtual:routes", "pages");
 
-      // Map dependencies for each data array in the extracted data
-      Object.entries(extractedData).forEach(([exportKey, entries]) => {
-        if (Array.isArray(entries)) {
-          mapEntries(entries, internalGen.virtualId, exportKey);
-        }
-      });
-    });
+    // Map module dependencies
+    for (const [key, moduleEntries] of Object.entries(
+      modules.data({ production: false }),
+    )) {
+      if (Array.isArray(moduleEntries)) {
+        const deps = new Set<string>();
+        const virtualModule = `virtual:${key}`;
 
-    logger.debug("Updated virtual module dependencies:", Array.from(virtualModuleDeps.keys()));
+        moduleEntries.forEach((entry, index) => {
+          if (entry?.path) {
+            const normalizedPath = normalizePath(entry.path);
+            fileToExportMap.set(normalizedPath, {
+              virtualModule,
+              exportKey: key,
+              index,
+            });
+            // Store absolute path for dependency tracking
+            const absolutePath = path.resolve(
+              config?.root || process.cwd(),
+              entry.path.slice(1),
+            );
+            deps.add(absolutePath);
+          }
+        });
+
+        virtualModuleDeps.set(virtualModule, deps);
+      }
+    }
+
+    logger.debug(
+      "Updated virtual module dependencies:",
+      Array.from(virtualModuleDeps.keys()),
+    );
   };
 
   /**
    * Establishes direct dependencies between an importer and all files in virtual modules it imports
    */
-  const establishDirectDependencies = (importerId: string, virtualModuleIds: string[]) => {
+  const establishDirectDependencies = (
+    importerId: string,
+    virtualModuleIds: string[],
+  ) => {
     if (!server) return;
 
     // Track which virtual modules this importer depends on
@@ -178,7 +180,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
 
     const importerVirtualDeps = importerToVirtualDeps.get(importerId)!;
 
-    virtualModuleIds.forEach(virtualId => {
+    virtualModuleIds.forEach((virtualId) => {
       importerVirtualDeps.add(virtualId);
 
       // Get all file dependencies for this virtual module
@@ -186,10 +188,14 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       if (!fileDeps) return;
     });
 
-    logger.debug(`Established dependencies for ${importerId}:`, Array.from(importerVirtualDeps));
+    logger.debug(
+      `Established dependencies for ${importerId}:`,
+      Array.from(importerVirtualDeps),
+    );
   };
 
-     const fileWatcher = createFileWatcher(
+  // File watcher for regenerating types on filesystem changes
+  const fileWatcher = createFileWatcher(
     options,
     logger,
     async (changedFiles) => {
@@ -200,20 +206,26 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       // Detect which virtual modules need updates
       const changedVirtualModules = new Set<string>();
 
-      // Check each generator for changes
-      internalGenerators.forEach(internalGen => {
-        if (hasVirtualModuleChanged(internalGen)) {
-          changedVirtualModules.add(internalGen.virtualId);
+      // Check if routes or modules have changed
+      if (hasVirtualModuleChanged("routes", routes)) {
+        changedVirtualModules.add("virtual:routes");
+      }
+
+      for (const moduleName of Object.keys(
+        modules.data({ production: false }),
+      )) {
+        if (hasVirtualModuleChanged(moduleName, modules)) {
+          changedVirtualModules.add(`virtual:${moduleName}`);
         }
-      });
+      }
 
       // Update dependency mappings
       updateDependencyMappings();
 
-      // Trigger HMR and type generation ONLY if virtual module content has changed
       if (changedVirtualModules.size > 0) {
-        // HMR updates in development mode
         if (server) {
+          // Trigger HMR updates in development mode ONLY for virtual module content changes
+          // (i.e., when routes are added/removed, not when individual route files change)
           const moduleGraph = server.moduleGraph;
 
           for (const moduleName of changedVirtualModules) {
@@ -222,6 +234,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
 
             if (mod) {
               moduleGraph.invalidateModule(mod);
+              // Invalidate all importers of the virtual module
               const affectedModules = new Set([mod]);
 
               mod.importers.forEach((importer) => {
@@ -229,6 +242,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
                 affectedModules.add(importer);
               });
 
+              // Send HMR update
               if (affectedModules.size > 0) {
                 logger.info(
                   `Sending HMR update for ${moduleName} structure change (affecting ${affectedModules.size} modules)`,
@@ -246,38 +260,41 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
               }
             }
           }
-        }
 
-        // Generate types only when there's a change
-        if (options.export?.types) {
-          try {
-            const output = path.join(
-              options.rootDir || process.cwd(),
-              options.export.types,
-            );
-            const routeLimit = options.export?.routeLimit || 1000;
+          // Generate types if enabled
+          if (options.export?.types) {
+            try {
+              const output = path.join(
+                options.rootDir || process.cwd(),
+                options.export.types,
+              );
+              const routeLimit = options.export?.routeLimit || 1000;
+              const routeData = routes.data({ production: false });
+              const types = {
+                ApplicationRoute: Object.values(routeData)
+                  .flat()
+                  .filter((r) => !!r?.route)
+                  .slice(0, routeLimit)
+                  .map((r) => r.route),
+              };
 
-            const types: Record<string, string[]> = {};
-
-            internalGenerators.forEach(internalGen => {
-              if (internalGen.generator.typesExtractor) {
-                const rawData = internalGen.legacyGenerator.data({ production: false });
-                const extractedData = internalGen.generator.dataExtractor(rawData, false);
-                const generatorTypes = internalGen.generator.typesExtractor(extractedData);
-                Object.assign(types, generatorTypes);
+              for (const [key, value] of Object.entries(
+                modules.data({ production: false }),
+              )) {
+                const type = options.modules[key]?.output?.types;
+                if (type) {
+                  const { name, key: prop } = type;
+                  (types as any)[name] = (value as any[]).map((m) => m[prop]);
+                }
               }
-            });
 
-            if (types.ApplicationRoute) {
-              types.ApplicationRoute = types.ApplicationRoute.slice(0, routeLimit);
+              await generateTypes(output, types);
+              logger.info(
+                `Types generated successfully (processed ${types.ApplicationRoute.length} routes)`,
+              );
+            } catch (error) {
+              logger.error("Failed to generate types:", error);
             }
-
-            await generateTypes(output, types);
-            logger.info(
-              `Types generated successfully (processed ${types.ApplicationRoute?.length || 0} routes)`,
-            );
-          } catch (error) {
-            logger.error("Failed to generate types:", error);
           }
         }
       }
@@ -303,11 +320,14 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
       server = _server;
 
       // Initialize virtual module cache
-      internalGenerators.forEach(internalGen => {
-        const rawData = internalGen.legacyGenerator.data({ production: false });
-        const extractedData = internalGen.generator.dataExtractor(rawData, false);
-        virtualModuleCache.set(internalGen.name, getDataHash(extractedData));
-      });
+      for (const name of Object.keys(modules.data({ production: false }))) {
+        const data = modules.data({ production: false })[name];
+        virtualModuleCache.set(name, getDataHash(data));
+      }
+      virtualModuleCache.set(
+        "routes",
+        getDataHash(routes.data({ production: false })),
+      );
 
       // Initialize dependency mappings
       updateDependencyMappings();
@@ -323,19 +343,16 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     async buildStart() {
       if (config.isProduction) {
         const emit = this.emitFile.bind(this);
+        const moduleFiles = handlers
+          .map((g) => g.modules({ production: true }))
+          .flat();
 
-        internalGenerators.forEach(internalGen => {
-          const rawData = internalGen.legacyGenerator.data({ production: true });
-          const extractedData = internalGen.generator.dataExtractor(rawData, true);
-          const moduleFiles = internalGen.generator.moduleResolver(extractedData, true);
-
-          moduleFiles.forEach((element) => {
-            emit({
-              type: "chunk",
-              id: element.file,
-              preserveSignature: "exports-only",
-              fileName: element.uri.replace(/^\/+/g, ""),
-            });
+        moduleFiles.forEach((element) => {
+          emit({
+            type: "chunk",
+            id: element.file,
+            preserveSignature: "exports-only",
+            fileName: element.uri.replace(/^\/+/g, ""),
           });
         });
       }
@@ -351,7 +368,8 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
      * @returns {string|null} Resolved ID with \0 prefix or null if not a virtual module.
      */
     resolveId(id: string): string | null {
-      const found = internalGenerators.find(gen => gen.virtualId === id);
+      const name = id.replace("virtual:", "");
+      const found = handlers.find((g) => g.find(name));
       if (found) return `\0${id}`;
       return null;
     },
@@ -362,13 +380,17 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
      * @returns {string|null} The generated module code or null if not found.
      */
     async load(id: string): Promise<string | null> {
-      const virtualId = id.replace("\0", "");
-      const internalGen = internalGenerators.find(gen => gen.virtualId === virtualId);
+      const name = id.replace("\0virtual:", "");
 
-      if (internalGen) {
-        const rawData = internalGen.legacyGenerator.data({ production: config.isProduction });
-        const extractedData = internalGen.generator.dataExtractor(rawData, config.isProduction);
-        return internalGen.generator.codeGenerator(extractedData, config.isProduction);
+      if (modules.find(name)) {
+        return modules.code({
+          production: config.isProduction,
+          name,
+        }) as string;
+      }
+
+      if (name === "routes") {
+        return routes.code({ production: config.isProduction }) as string;
       }
 
       return null;
@@ -397,6 +419,9 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     /**
      * Transforms modules that import virtual modules, establishing direct dependencies
      * for proper HMR behavior.
+     * @param {string} code - The module's source code.
+     * @param {string} id - The module's ID.
+     * @returns {object|null} Transformed code with HMR or null if no transformation.
      */
     async transform(
       code: string,
@@ -420,8 +445,13 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
         await init;
         const [imports] = parseImports(code);
 
-        // List all virtual module IDs from generators
-        const virtualModuleIds = internalGenerators.map(gen => gen.virtualId);
+        // List all virtual module IDs from handlers
+        const virtualModuleIds = [
+          ...Object.keys(modules.data({ production: false })).map(
+            (key) => `virtual:${key}`,
+          ),
+          "virtual:routes",
+        ];
 
         const importedVirtualIds = imports
           .map((imp) => imp.n)
@@ -430,7 +460,10 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
           ) as Array<string>;
 
         if (importedVirtualIds.length > 0) {
-          logger.debug(`Module ${id} imports virtual modules:`, importedVirtualIds);
+          logger.debug(
+            `Module ${id} imports virtual modules:`,
+            importedVirtualIds,
+          );
 
           // Establish direct dependencies
           establishDirectDependencies(id, importedVirtualIds);
@@ -441,7 +474,9 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
             if (fileDeps) {
               fileDeps.forEach((filePath) => {
                 this.addWatchFile(filePath);
-                logger.debug(`Added watch file: ${filePath} for importer: ${id}`);
+                logger.debug(
+                  `Added watch file: ${filePath} for importer: ${id}`,
+                );
               });
             }
           });
@@ -474,16 +509,22 @@ if (import.meta.hot) {
      */
     handleHotUpdate({ file, server }) {
       const normalizedFile = normalizePath(path.resolve(file));
-      logger.debug(`handleHotUpdate: Processing file change: ${normalizedFile}`);
+      logger.debug(
+        `handleHotUpdate: Processing file change: ${normalizedFile}`,
+      );
 
       // Check if this file is a dependency of any virtual module
       const mapping = fileToExportMap.get(normalizedFile);
       if (!mapping) {
-        logger.debug(`File ${normalizedFile} is not tracked by any virtual module`);
+        logger.debug(
+          `File ${normalizedFile} is not tracked by any virtual module`,
+        );
         return;
       }
 
-      logger.debug(`File ${normalizedFile} is tracked by virtual module: ${mapping.virtualModule}`);
+      logger.debug(
+        `File ${normalizedFile} is tracked by virtual module: ${mapping.virtualModule}`,
+      );
 
       // Find all modules that import virtual modules containing this file
       const affectedModules = new Set();
@@ -503,7 +544,7 @@ if (import.meta.hot) {
 
       if (affectedModules.size > 0) {
         logger.info(
-          `HMR: File ${path.basename(file)} changed, updating ${affectedModules.size} importer modules (bypassing virtual module)`
+          `HMR: File ${path.basename(file)} changed, updating ${affectedModules.size} importer modules (bypassing virtual module)`,
         );
 
         // Return the affected modules for Vite to handle the HMR update
@@ -524,18 +565,14 @@ if (import.meta.hot) {
 
       if (options.sitemap && config.isProduction) {
         const { baseUrl, exclude = [] } = options.sitemap;
-
-        // Collect sitemap entries from all generators that support it
-        const sitemapEntries: Array<{ route: string; metadata?: any }> = [];
-
-        internalGenerators.forEach(internalGen => {
-          if (internalGen.generator.sitemapExtractor) {
-            const rawData = internalGen.legacyGenerator.data({ production: true });
-            const extractedData = internalGen.generator.dataExtractor(rawData, true);
-            const generatorSitemapEntries = internalGen.generator.sitemapExtractor(extractedData);
-            sitemapEntries.push(...generatorSitemapEntries);
-          }
-        });
+        const routeData = routes.data({ production: true });
+        const sitemapEntries = Object.values(routeData)
+          .flat()
+          .filter((r) => !!r?.route)
+          .map((route) => ({
+            route: route.route,
+            metadata: route.metadata,
+          }));
 
         const sitemap = generateSitemap(sitemapEntries, baseUrl, exclude);
         this.emitFile({

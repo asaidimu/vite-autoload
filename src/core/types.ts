@@ -57,33 +57,13 @@ export interface ResolvedRouteModule {
   readonly file: string;
 }
 
-// New generator interface
-export interface GeneratorDefinition {
-  readonly name: string;
-  readonly virtualId?: string; // defaults to `virtual:${name}`
-  readonly dataExtractor: (data: any, production: boolean) => Record<string, any[]>;
-  readonly codeGenerator: (data: Record<string, any[]>, production: boolean) => string;
-  readonly moduleResolver: (data: Record<string, any[]>, production: boolean) => ResolvedFile[];
-  readonly typesExtractor?: (data: Record<string, any[]>) => Record<string, string[]>;
-  readonly sitemapExtractor?: (data: Record<string, any[]>) => Array<{
-    route: string;
-    metadata?: any;
-  }>;
-}
-
-// Updated config interfaces with embedded generators
 export interface RoutesConfig {
   readonly views: TransformConfig<ResolvedRouteModule, RouteData, any>;
   readonly pages: TransformConfig<ResolvedRouteModule, RouteData, any>;
-  readonly generator?: GeneratorDefinition; // Optional custom generator
-}
-
-export interface ModuleConfig extends TransformConfig<unknown, unknown, unknown> {
-  readonly generator?: GeneratorDefinition; // Optional custom generator
 }
 
 export interface ModulesConfig {
-  readonly [key: string]: ModuleConfig;
+  readonly [key: string]: TransformConfig<unknown, unknown, unknown>;
 }
 
 export interface SitemapConfig {
