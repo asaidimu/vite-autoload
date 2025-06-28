@@ -1,3 +1,10 @@
+## [2.1.2](https://github.com/asaidimu/vite-autoload/compare/v2.1.1...v2.1.2) (2025-06-28)
+
+
+### Bug Fixes
+
+* **plugin:** optimize internal processing and config handling ([abe54b4](https://github.com/asaidimu/vite-autoload/commit/abe54b4dedb8fd174f9659d72d440844ecd4ad2e))
+
 ## [2.1.1](https://github.com/asaidimu/vite-autoload/compare/v2.1.0...v2.1.1) (2025-06-28)
 
 
