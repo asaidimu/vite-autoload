@@ -47,6 +47,12 @@
 
 Beyond basic autoloading, this plugin integrates advanced features like automatic sitemap generation for SEO, a comprehensive PWA web manifest generation, and a powerful metadata extraction system. The project also lays the groundwork for an intelligent asset manifest system, aiming to categorize assets (critical, lazy, prefetch) for smart caching and delivery strategies via an integrated service worker (currently marked as Work in Progress).
 
+**⚠️ Beta Notice: Rapid & Breaking Changes**
+This project is currently in its early stages of development and should be considered beta software. The API and configuration options are subject to frequent and potentially breaking changes without prior notice as the project evolves.
+While it is feature-rich, it has not yet been battle-tested in a wide range of production environments. Please use with caution, and be sure to pin a specific version in your package.json to avoid unexpected disruptions from new releases.
+
+We highly encourage feedback and contributions, but please be prepared for a rapidly changing codebase.
+
 ### Key Features
 
 *   🚀 **Automatic Route & Module Generation**: Dynamically discover and expose application routes (e.g., pages) and other reusable modules (e.g., components) from specified directories based on flexible glob match patterns.
