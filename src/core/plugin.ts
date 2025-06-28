@@ -536,19 +536,40 @@ if (import.meta.hot) {
             logger.debug(`Adding affected importer: ${importerId}`);
             affectedModules.add(importerModule);
 
-            // Also invalidate the importer module
+            // Invalidate the importer module to force re-execution
             server.moduleGraph.invalidateModule(importerModule);
+
+            // Also invalidate any modules that import this importer
+            importerModule.importers.forEach((parentImporter) => {
+              server.moduleGraph.invalidateModule(parentImporter);
+              affectedModules.add(parentImporter);
+            });
           }
         }
       }
 
       if (affectedModules.size > 0) {
         logger.info(
-          `HMR: File ${path.basename(file)} changed, updating ${affectedModules.size} importer modules (bypassing virtual module)`,
+          `HMR: File ${path.basename(file)} changed, updating ${affectedModules.size} importer modules`,
         );
 
-        // Return the affected modules for Vite to handle the HMR update
-        return Array.from(affectedModules) as any;
+        // Force a more explicit HMR update to ensure dynamic imports are re-executed
+        const updates = Array.from(affectedModules).map((mod: any) => ({
+          type: "js-update" as const,
+          timestamp: Date.now(),
+          path: mod.id || mod.file,
+          acceptedPath: mod.id || mod.file,
+        }));
+
+        // Send HMR update directly to ensure proper invalidation
+        server.hot.send({
+          type: "update",
+          updates,
+        });
+
+        // Return empty array to prevent Vite's default HMR handling
+        // since we're handling it explicitly above
+        return [];
       }
 
       logger.debug(`No affected modules found for file: ${normalizedFile}`);
