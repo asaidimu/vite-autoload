@@ -9,9 +9,12 @@ function updateDistPackage() {
   distPackageJson.devDependencies = packageJson.devDependencies || {};
 
   // Write back to dist.package.json
-  writeFileSync("dist.package.json", JSON.stringify(distPackageJson, null, 2) + "\n");
+  writeFileSync(
+    "dist.package.json",
+    JSON.stringify(distPackageJson, null, 2) + "\n",
+  );
 
   console.log("Updated dist.package.json successfully!");
 }
 
-updateDistPackage()
+updateDistPackage();

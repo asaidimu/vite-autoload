@@ -9,14 +9,26 @@ The plugin provides a flexible generator system that allows you to define custom
 While `createAutoloadPlugin` uses `defaultRoutesGenerator` and `createDefaultModuleGenerator` by default, you can override these or create entirely new generators for specific module groups.
 
 #### `GeneratorDefinition` Interface:
+
 ```typescript
 interface GeneratorDefinition {
   readonly name: string;
   readonly virtualId?: string;
-  readonly dataExtractor: (data: any, production: boolean) => Record<string, any[]>;
-  readonly codeGenerator: (data: Record<string, any[]>, production: boolean) => string;
-  readonly moduleResolver: (data: Record<string, any[]>, production: boolean) => ResolvedFile[];
-  readonly typesExtractor?: (data: Record<string, any[]>) => Record<string, string[]>;
+  readonly dataExtractor: (
+    data: any,
+    production: boolean,
+  ) => Record<string, any[]>;
+  readonly codeGenerator: (
+    data: Record<string, any[]>,
+    production: boolean,
+  ) => string;
+  readonly moduleResolver: (
+    data: Record<string, any[]>,
+    production: boolean,
+  ) => ResolvedFile[];
+  readonly typesExtractor?: (
+    data: Record<string, any[]>,
+  ) => Record<string, string[]>;
   readonly sitemapExtractor?: (data: Record<string, any[]>) => Array<{
     route: string;
     metadata?: any;
@@ -24,15 +36,16 @@ interface GeneratorDefinition {
 }
 ```
 
-*   `name`: A unique identifier for the generator.
-*   `virtualId`: The virtual module ID (e.g., `virtual:my-custom-data`). Defaults to `virtual:${name}`.
-*   `dataExtractor`: Transforms the raw data from `createModuleGenerator` (which is based on your `transform` and `aggregate` functions) into a format suitable for your `codeGenerator` and other extractors.
-*   `codeGenerator`: Takes the extracted data and produces the final JavaScript string content for the virtual module.
-*   `moduleResolver`: Identifies which `ResolvedFile` entries from the extracted data should be treated as actual modules that Vite needs to emit as chunks.
-*   `typesExtractor` (Optional): Produces type definitions (e.g., union types) based on the extracted data.
-*   `sitemapExtractor` (Optional): Generates sitemap entries from the extracted data.
+- `name`: A unique identifier for the generator.
+- `virtualId`: The virtual module ID (e.g., `virtual:my-custom-data`). Defaults to `virtual:${name}`.
+- `dataExtractor`: Transforms the raw data from `createModuleGenerator` (which is based on your `transform` and `aggregate` functions) into a format suitable for your `codeGenerator` and other extractors.
+- `codeGenerator`: Takes the extracted data and produces the final JavaScript string content for the virtual module.
+- `moduleResolver`: Identifies which `ResolvedFile` entries from the extracted data should be treated as actual modules that Vite needs to emit as chunks.
+- `typesExtractor` (Optional): Produces type definitions (e.g., union types) based on the extracted data.
+- `sitemapExtractor` (Optional): Generates sitemap entries from the extracted data.
 
 #### Using `createCustomGenerator`
+
 You can extend the default generators using the `createCustomGenerator` helper to apply specific overrides.
 
 ```typescript
@@ -70,12 +83,14 @@ routes: {
 ### Optimization
 
 #### `chunkSize`
+
 For large applications with many routes or modules, setting a `chunkSize` can help manage memory consumption during the data processing phase. The plugin processes files in batches of `chunkSize`.
 
-*   **Type**: `number`
-*   **Default**: `100`
+- **Type**: `number`
+- **Default**: `100`
 
 Adjust this value in your `PluginOptions`:
+
 ```typescript
 createAutoloadConfig({
   extract
@@ -88,10 +103,11 @@ createAutoloadConfig({
 ```
 
 #### `watch` Options
+
 Fine-tune the file watcher to improve responsiveness and stability, especially in specific development environments or with rapidly changing files.
 
-*   `debounceTime`: `number` (Optional, default `1000` ms) - The delay before processing a file change. Increase if too many HMR updates occur.
-*   `stabilityThreshold`: `number` (Optional, default `300` ms) - The time to wait for write operations to finish. Increase if file changes are processed before complete file writes.
+- `debounceTime`: `number` (Optional, default `1000` ms) - The delay before processing a file change. Increase if too many HMR updates occur.
+- `stabilityThreshold`: `number` (Optional, default `300` ms) - The time to wait for write operations to finish. Increase if file changes are processed before complete file writes.
 
 ```typescript
 createAutoloadConfig({
@@ -108,10 +124,11 @@ createAutoloadConfig({
 ```
 
 #### `logLevel`
+
 Control the verbosity of the plugin's console output. Set to `'debug'` for detailed internal logs when troubleshooting.
 
-*   **Type**: `LogLevel` (`'debug'` | `'info'` | `'warn'` | `'error'`)
-*   **Default**: `'info'`
+- **Type**: `LogLevel` (`'debug'` | `'info'` | `'warn'` | `'error'`)
+- **Default**: `'info'`
 
 ```typescript
 createAutoloadConfig({
@@ -125,6 +142,7 @@ createAutoloadConfig({
 ```
 
 ---
+
 ### 🤖 AI Agent Guidance
 
 ```json
@@ -153,4 +171,5 @@ createAutoloadConfig({
 ```
 
 ---
-*Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed.*
+
+_Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed._

@@ -1,7 +1,7 @@
 import "./style.css";
 import typescriptLogo from "./typescript.svg";
 import viteLogo from "/vite.svg";
-import {action} from "./app"
+import { action } from "./app";
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div>
@@ -21,4 +21,4 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   </div>
 `;
 
-action()
+action();

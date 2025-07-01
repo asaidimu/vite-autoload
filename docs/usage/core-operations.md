@@ -5,13 +5,16 @@
 The core functionality of `@asaidimu/vite-autoload` is encapsulated in `createAutoloadPlugin` which takes a comprehensive `PluginOptions` object. This object defines everything from file scanning rules to output generation and custom data transformations.
 
 #### `createAutoloadPlugin(options: PluginOptions): Plugin`
+
 This is the main function to initialize and configure the Vite plugin. It registers all necessary Vite hooks for module resolution, loading, HMR, and build processes.
 
 **Parameters**:
-*   `options`: (`PluginOptions`) - An object containing all configuration settings for the plugin.
+
+- `options`: (`PluginOptions`) - An object containing all configuration settings for the plugin.
 
 **Return Value**:
-*   A `Vite.Plugin` object ready to be added to the `plugins` array in your `vite.config.ts`.
+
+- A `Vite.Plugin` object ready to be added to the `plugins` array in your `vite.config.ts`.
 
 #### The `PluginOptions` Object
 
@@ -34,16 +37,16 @@ interface PluginOptions {
 
 Each property configures a specific aspect:
 
-*   `rootDir`: Sets the base directory for resolving relative paths.
-*   `export`: Controls the generation of supplementary files like TypeScript declaration files.
-*   `watch`: Configures the file watcher behavior, including debounce and stability thresholds.
-*   `sitemap`: Defines settings for automatic `sitemap.xml` generation.
-*   `manifest`: Specifies options for PWA `manifest.webmanifest` generation.
-*   `routes`: Describes how application routes (e.g., pages, views) are discovered, transformed, and exposed.
-*   `modules`: Defines configuration for general application modules (e.g., components, utilities, hooks).
-*   `logLevel`: Adjusts the verbosity of the plugin's console output.
-*   `extract`: A function providing custom logic for extracting metadata from source files.
-*   `chunkSize`: Optimizes memory usage by processing routes/modules in batches.
+- `rootDir`: Sets the base directory for resolving relative paths.
+- `export`: Controls the generation of supplementary files like TypeScript declaration files.
+- `watch`: Configures the file watcher behavior, including debounce and stability thresholds.
+- `sitemap`: Defines settings for automatic `sitemap.xml` generation.
+- `manifest`: Specifies options for PWA `manifest.webmanifest` generation.
+- `routes`: Describes how application routes (e.g., pages, views) are discovered, transformed, and exposed.
+- `modules`: Defines configuration for general application modules (e.g., components, utilities, hooks).
+- `logLevel`: Adjusts the verbosity of the plugin's console output.
+- `extract`: A function providing custom logic for extracting metadata from source files.
+- `chunkSize`: Optimizes memory usage by processing routes/modules in batches.
 
 Detailed explanations for each of these configuration sub-objects are provided in the 'Configuration Options' section under 'Usage Documentation'.
 
@@ -65,6 +68,7 @@ When setting up `routes` or `modules`, you need to define how the plugin finds f
 **Scenario**: You have a `src/components` directory with React/Vue components (`.tsx` files), and you want to expose them as a `virtual:components` module, allowing dynamic imports and type-safe access to component names.
 
 **Steps**:
+
 1.  **Configure `modules.components`**: Define `input.directory`, `input.match`, and `input.ignore` (e.g., for test files).
 2.  **Define `transform` Logic**: For each component file, extract a `name` and its `path` for dynamic import.
 3.  **Implement `aggregate` (Optional)**: If you want to access components by name (e.g., `components.Button`), use `aggregate` to convert the array of component objects into a map.
@@ -102,6 +106,7 @@ const MyButton = await import(components.Button);
 ```
 
 ---
+
 ### 🤖 AI Agent Guidance
 
 ```json
@@ -128,4 +133,5 @@ const MyButton = await import(components.Button);
 ```
 
 ---
-*Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed.*
+
+_Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed._

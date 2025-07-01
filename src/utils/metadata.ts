@@ -1,7 +1,7 @@
-import ts from 'typescript';
-import * as fs from 'fs';
-import * as path from 'path';
-import { z } from 'zod';
+import ts from "typescript";
+import * as fs from "fs";
+import * as path from "path";
+import { z } from "zod";
 
 interface ImportedModule {
   name: string;
@@ -16,10 +16,12 @@ interface MetadataExtractor {
 /**
  * Finds all import declarations in a source file
  */
-function findImportDeclarations(sourceFile: ts.SourceFile): Map<string, ImportedModule> {
+function findImportDeclarations(
+  sourceFile: ts.SourceFile,
+): Map<string, ImportedModule> {
   const imports = new Map<string, ImportedModule>();
 
-  ts.forEachChild(sourceFile, node => {
+  ts.forEachChild(sourceFile, (node) => {
     if (ts.isImportDeclaration(node)) {
       const importPath = (node.moduleSpecifier as ts.StringLiteral).text;
       const importClause = node.importClause;
@@ -29,16 +31,19 @@ function findImportDeclarations(sourceFile: ts.SourceFile): Map<string, Imported
         imports.set(importClause.name.text, {
           name: importClause.name.text,
           path: importPath,
-          isDefault: true
+          isDefault: true,
         });
       }
 
-      if (importClause?.namedBindings && ts.isNamedImports(importClause.namedBindings)) {
+      if (
+        importClause?.namedBindings &&
+        ts.isNamedImports(importClause.namedBindings)
+      ) {
         // Named imports
-        importClause.namedBindings.elements.forEach(element => {
+        importClause.namedBindings.elements.forEach((element) => {
           imports.set(element.name.text, {
             name: element.propertyName?.text || element.name.text,
-            path: importPath
+            path: importPath,
           });
         });
       }
@@ -51,14 +56,18 @@ function findImportDeclarations(sourceFile: ts.SourceFile): Map<string, Imported
 /**
  * Creates a dynamic import string for an imported module
  */
-function createDynamicImport(importInfo: ImportedModule, sourceDir: string): string {
-  const resolvedPath = importInfo.path.startsWith('.')
-    ? path.relative(process.cwd(), path.resolve(sourceDir, importInfo.path))
-      .replace(/\\/g, '/')
-      .replace(/^src\//, '@/')
+function createDynamicImport(
+  importInfo: ImportedModule,
+  sourceDir: string,
+): string {
+  const resolvedPath = importInfo.path.startsWith(".")
+    ? path
+        .relative(process.cwd(), path.resolve(sourceDir, importInfo.path))
+        .replace(/\\/g, "/")
+        .replace(/^src\//, "@/")
     : importInfo.path;
 
-  return `() => import('${resolvedPath}').then(m => ${importInfo.isDefault ? 'm.default' : `m.${importInfo.name}`})`;
+  return `() => import('${resolvedPath}').then(m => ${importInfo.isDefault ? "m.default" : `m.${importInfo.name}`})`;
 }
 
 /**
@@ -67,13 +76,13 @@ function createDynamicImport(importInfo: ImportedModule, sourceDir: string): str
 function extractObjectLiteralValue(
   node: ts.ObjectLiteralExpression,
   imports: Map<string, ImportedModule>,
-  sourceDir: string
+  sourceDir: string,
 ): Record<string, any> {
   const obj: Record<string, any> = {};
 
   for (const property of node.properties) {
     if (ts.isPropertyAssignment(property)) {
-      const propertyName = property.name.getText().replace(/['"]/g, '');
+      const propertyName = property.name.getText().replace(/['"]/g, "");
 
       if (ts.isIdentifier(property.initializer)) {
         // Handle imported values
@@ -84,7 +93,11 @@ function extractObjectLiteralValue(
         }
       }
 
-      obj[propertyName] = extractValue(property.initializer, imports, sourceDir);
+      obj[propertyName] = extractValue(
+        property.initializer,
+        imports,
+        sourceDir,
+      );
     }
   }
 
@@ -97,7 +110,7 @@ function extractObjectLiteralValue(
 function extractValue(
   node: ts.Node,
   imports: Map<string, ImportedModule>,
-  sourceDir: string
+  sourceDir: string,
 ): any {
   if (ts.isStringLiteral(node)) {
     return node.text;
@@ -105,20 +118,29 @@ function extractValue(
   if (ts.isNumericLiteral(node)) {
     return Number(node.text);
   }
-  if (ts.isToken(node) && (node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword)) {
+  if (
+    ts.isToken(node) &&
+    (node.kind === ts.SyntaxKind.TrueKeyword ||
+      node.kind === ts.SyntaxKind.FalseKeyword)
+  ) {
     return node.kind === ts.SyntaxKind.TrueKeyword;
   }
   if (ts.isArrayLiteralExpression(node)) {
-    return node.elements.map(element => extractValue(element, imports, sourceDir));
+    return node.elements.map((element) =>
+      extractValue(element, imports, sourceDir),
+    );
   }
   if (ts.isObjectLiteralExpression(node)) {
-    return node.properties.reduce((obj, prop) => {
-      if (ts.isPropertyAssignment(prop)) {
-        const key = prop.name.getText().replace(/['"]/g, '');
-        obj[key] = extractValue(prop.initializer, imports, sourceDir);
-      }
-      return obj;
-    }, {} as Record<string, any>);
+    return node.properties.reduce(
+      (obj, prop) => {
+        if (ts.isPropertyAssignment(prop)) {
+          const key = prop.name.getText().replace(/['"]/g, "");
+          obj[key] = extractValue(prop.initializer, imports, sourceDir);
+        }
+        return obj;
+      },
+      {} as Record<string, any>,
+    );
   }
   if (ts.isIdentifier(node)) {
     // Check if it's an imported value
@@ -131,7 +153,7 @@ function extractValue(
   // Handle template literals
   if (ts.isTemplateExpression(node)) {
     let result = node.head.text;
-    node.templateSpans.forEach(span => {
+    node.templateSpans.forEach((span) => {
       const spanValue = extractValue(span.expression, imports, sourceDir);
       result += `${spanValue}${span.literal.text}`;
     });
@@ -145,7 +167,7 @@ function extractValue(
  * Checks if a value is a dynamic import string
  */
 function isImportString(value: any): boolean {
-  return typeof value === 'string' && value.startsWith('() => import(');
+  return typeof value === "string" && value.startsWith("() => import(");
 }
 
 /**
@@ -154,16 +176,21 @@ function isImportString(value: any): boolean {
 function createDynamicImportFunction(importString: string): () => Promise<any> {
   // Extract the path and property from the import string
   const pathMatch = importString.match(/import\('([^']+)'\)/);
-  const propertyMatch = importString.match(/\.then\(m => (m\.default|m\.[^)]+)\)/);
+  const propertyMatch = importString.match(
+    /\.then\(m => (m\.default|m\.[^)]+)\)/,
+  );
 
   if (!pathMatch || !propertyMatch) {
     throw new Error(`Invalid import string format: ${importString}`);
   }
 
   const importPath = pathMatch[1];
-  const isDefault = propertyMatch[1] === 'm.default';
+  const isDefault = propertyMatch[1] === "m.default";
 
-  return () => import(importPath).then(m => isDefault ? m.default : m[propertyMatch[1].slice(2)]);
+  return () =>
+    import(importPath).then((m) =>
+      isDefault ? m.default : m[propertyMatch[1].slice(2)],
+    );
 }
 
 /**
@@ -171,7 +198,7 @@ function createDynamicImportFunction(importString: string): () => Promise<any> {
  */
 
 function transformImportStrings(obj: any): any {
-  if (!obj || typeof obj !== 'object') {
+  if (!obj || typeof obj !== "object") {
     return obj;
   }
 
@@ -183,7 +210,7 @@ function transformImportStrings(obj: any): any {
   for (const [key, value] of Object.entries(transformed)) {
     if (isImportString(value)) {
       transformed[key] = createDynamicImportFunction(value as string);
-    } else if (typeof value === 'object') {
+    } else if (typeof value === "object") {
       transformed[key] = transformImportStrings(value);
     }
   }
@@ -191,11 +218,10 @@ function transformImportStrings(obj: any): any {
   return transformed;
 }
 
-
 function extractDefaultExportMetadata(
   sourceFile: ts.SourceFile,
   imports: Map<string, ImportedModule>,
-  sourceDir: string
+  sourceDir: string,
 ): Record<string, any> | undefined {
   // Helper function to recursively evaluate expressions
   function evaluateExpression(node: ts.Node): any {
@@ -217,17 +243,17 @@ function extractDefaultExportMetadata(
     if (ts.isIdentifier(node)) {
       // Find the variable declaration
       const varDeclaration = sourceFile.statements.find(
-        stmt =>
+        (stmt) =>
           ts.isVariableStatement(stmt) &&
           stmt.declarationList.declarations.some(
-            decl => ts.isIdentifier(decl.name) &&
-                    decl.name.text === node.text
-          )
+            (decl) =>
+              ts.isIdentifier(decl.name) && decl.name.text === node.text,
+          ),
       ) as ts.VariableStatement | undefined;
 
       if (varDeclaration) {
         const declaration = varDeclaration.declarationList.declarations.find(
-          decl => ts.isIdentifier(decl.name) && decl.name.text === node.text
+          (decl) => ts.isIdentifier(decl.name) && decl.name.text === node.text,
         );
 
         if (declaration && declaration.initializer) {
@@ -250,11 +276,15 @@ function extractDefaultExportMetadata(
     // Handle function calls (like IIFE)
     if (ts.isCallExpression(node)) {
       // For immediately invoked function expressions
-      if (ts.isArrowFunction(node.expression) || ts.isFunctionExpression(node.expression)) {
+      if (
+        ts.isArrowFunction(node.expression) ||
+        ts.isFunctionExpression(node.expression)
+      ) {
         // Find the last return statement or expression
         const returnValue = node.expression.body;
         if (ts.isBlock(returnValue)) {
-          const lastStatement = returnValue.statements[returnValue.statements.length - 1];
+          const lastStatement =
+            returnValue.statements[returnValue.statements.length - 1];
           if (ts.isReturnStatement(lastStatement) && lastStatement.expression) {
             return evaluateExpression(lastStatement.expression);
           }
@@ -298,42 +328,55 @@ function extractDefaultExportMetadata(
 }
 
 // Modify the existing extract method to use this new function
-export function createMetadataExtractor(schema: z.ZodType, options: { exportName?: string | 'default'} = { exportName: 'metadata' }): MetadataExtractor {
-
+export function createMetadataExtractor(
+  schema: z.ZodType,
+  options: { exportName?: string | "default" } = { exportName: "metadata" },
+): MetadataExtractor {
   const transformedSchema = schema.transform((obj) => {
     return transformImportStrings(obj);
   });
 
   return {
     extract(filePath: string) {
-
       try {
         const sourceFile = ts.createSourceFile(
           filePath,
-          fs.readFileSync(filePath, 'utf-8'),
+          fs.readFileSync(filePath, "utf-8"),
           ts.ScriptTarget.Latest,
-          true
+          true,
         );
 
         const imports = findImportDeclarations(sourceFile);
         const sourceDir = path.dirname(filePath);
         let metadata: Record<string, any> | undefined;
 
-        if (options.exportName === 'default') {
+        if (options.exportName === "default") {
           // Use the new extraction method for default exports
-          metadata = extractDefaultExportMetadata(sourceFile, imports, sourceDir);
+          metadata = extractDefaultExportMetadata(
+            sourceFile,
+            imports,
+            sourceDir,
+          );
         } else {
           // Existing logic for named exports
           for (const node of sourceFile.statements) {
             if (
               ts.isVariableStatement(node) &&
-              node.declarationList.declarations.some(d =>
-                ts.isIdentifier(d.name) && d.name.text === options.exportName
+              node.declarationList.declarations.some(
+                (d) =>
+                  ts.isIdentifier(d.name) && d.name.text === options.exportName,
               )
             ) {
               const declaration = node.declarationList.declarations[0];
-              if (declaration.initializer && ts.isObjectLiteralExpression(declaration.initializer)) {
-                metadata = extractObjectLiteralValue(declaration.initializer, imports, sourceDir);
+              if (
+                declaration.initializer &&
+                ts.isObjectLiteralExpression(declaration.initializer)
+              ) {
+                metadata = extractObjectLiteralValue(
+                  declaration.initializer,
+                  imports,
+                  sourceDir,
+                );
                 break;
               }
             }
@@ -341,22 +384,24 @@ export function createMetadataExtractor(schema: z.ZodType, options: { exportName
         }
 
         if (!metadata) {
-          throw new Error(`No metadata found in ${filePath} at ${options.exportName}`);
+          throw new Error(
+            `No metadata found in ${filePath} at ${options.exportName}`,
+          );
         }
 
         // Validate metadata against schema
         const result = transformedSchema.safeParse(metadata);
         if (!result.success) {
-          const errors = result.error.errors.map(e =>
-            `${e.path.join('.')}: ${e.message}`
-          ).join('\n');
+          const errors = result.error.errors
+            .map((e) => `${e.path.join(".")}: ${e.message}`)
+            .join("\n");
           throw new Error(`Invalid metadata in ${filePath}:\n${errors}`);
         }
 
         return result.data;
       } catch (error) {
         // console.warn(`Error processing ${filePath}:`);
-        return null
+        return null;
       }
     },
   };
@@ -369,7 +414,7 @@ type Props = {
 };
 
 export function extract<T>({ filePath, schema, name }: Props) {
-    const extractor = createMetadataExtractor(schema, { exportName: name  })
-    const value = extractor.extract(filePath)
-    return value as T
+  const extractor = createMetadataExtractor(schema, { exportName: name });
+  const value = extractor.extract(filePath);
+  return value as T;
 }

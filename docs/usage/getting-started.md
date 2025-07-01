@@ -1,13 +1,15 @@
 # Getting Started
 
 ### Overview
+
 `@asaidimu/vite-autoload` simplifies web development by automating file discovery, module bundling, and static asset generation within Vite projects. It transforms your filesystem structure into importable JavaScript modules, enhancing type safety and developer experience. The plugin is highly configurable, allowing you to define custom logic for how files are processed, how their metadata is extracted, and how they are exposed in your application.
 
 ### Core Concepts
-*   **Virtual Modules**: The plugin creates 'virtual' modules (e.g., `virtual:routes`, `virtual:components`) that can be imported directly in your application code. These modules contain data derived from files on your filesystem.
-*   **File Matching and Transformation**: You define patterns to match files in specific directories. For each matched file, a `transform` function can convert it into a custom data structure (e.g., a route object with metadata).
-*   **Metadata Extraction**: Leveraging TypeScript's Abstract Syntax Tree (AST) and Zod schemas, the plugin can statically analyze your source files to extract structured metadata (like page titles, authentication requirements) and include it in your generated modules.
-*   **Automatic Generation**: Beyond module data, the plugin automates the generation of `sitemap.xml` for SEO and `manifest.webmanifest` for PWA capabilities, streamlining deployment.
+
+- **Virtual Modules**: The plugin creates 'virtual' modules (e.g., `virtual:routes`, `virtual:components`) that can be imported directly in your application code. These modules contain data derived from files on your filesystem.
+- **File Matching and Transformation**: You define patterns to match files in specific directories. For each matched file, a `transform` function can convert it into a custom data structure (e.g., a route object with metadata).
+- **Metadata Extraction**: Leveraging TypeScript's Abstract Syntax Tree (AST) and Zod schemas, the plugin can statically analyze your source files to extract structured metadata (like page titles, authentication requirements) and include it in your generated modules.
+- **Automatic Generation**: Beyond module data, the plugin automates the generation of `sitemap.xml` for SEO and `manifest.webmanifest` for PWA capabilities, streamlining deployment.
 
 ### Quick Setup Guide
 
@@ -29,9 +31,7 @@
     import createAutoloadConfig from "./autoload.config"; // Your custom autoload config file
 
     export default defineConfig({
-      plugins: [
-        createAutoloadPlugin(createAutoloadConfig({ extract }))
-      ],
+      plugins: [createAutoloadPlugin(createAutoloadConfig({ extract }))],
     });
     ```
 
@@ -40,13 +40,18 @@
     ```typescript
     // autoload.config.ts (example content)
     import { z } from "zod";
-    import type { ExtractFunction, PluginOptions } from "@asaidimu/vite-autoload";
+    import type {
+      ExtractFunction,
+      PluginOptions,
+    } from "@asaidimu/vite-autoload";
 
     interface ConfigOptions {
       readonly extract: ExtractFunction;
     }
 
-    export default function createAutoloadConfig({ extract }: ConfigOptions): PluginOptions {
+    export default function createAutoloadConfig({
+      extract,
+    }: ConfigOptions): PluginOptions {
       return {
         rootDir: process.cwd(),
         export: {
@@ -66,8 +71,16 @@
           display: "standalone",
           start_url: "/",
           icons: [
-            { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-            { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+            {
+              src: "/icons/icon-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "/icons/icon-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
           ],
           output: "manifest.webmanifest",
         },
@@ -81,7 +94,7 @@
             output: {
               name: "views",
               template: "export const views = {{ data }};",
-              types: { name: "ViewKeys", key: "route" }
+              types: { name: "ViewKeys", key: "route" },
             },
             transform: (view) => {
               const route = view.path
@@ -91,14 +104,17 @@
                 .replace(/index.?$/, "");
 
               return {
-                route: route.length === 1 ? route : route.replace(new RegExp("/$"), ""),
+                route:
+                  route.length === 1
+                    ? route
+                    : route.replace(new RegExp("/$"), ""),
                 path: view.uri,
                 module: route.split("/")[0],
                 metadata: extract({
                   filePath: view.file,
-                  schema: z.object({ 
-                    title: z.string(), 
-                    description: z.string().optional() 
+                  schema: z.object({
+                    title: z.string(),
+                    description: z.string().optional(),
                   }),
                   name: "metadata",
                 }),
@@ -125,7 +141,10 @@
                 path: page.uri,
                 metadata: extract({
                   filePath: page.file,
-                  schema: z.object({ title: z.string(), authRequired: z.boolean().optional() }),
+                  schema: z.object({
+                    title: z.string(),
+                    authRequired: z.boolean().optional(),
+                  }),
                   name: "metadata",
                 }),
               };
@@ -138,35 +157,43 @@
               directory: "src/components",
               match: ["*.tsx", "*/index.tsx"],
               ignore: ["**/__tests__/**"],
-              prefix: "/components/"
+              prefix: "/components/",
             },
             output: {
               name: "components",
-              template: "export const components = {{ data }};\nexport default components;",
-              types: { name: "ComponentKeys", key: "name" }
+              template:
+                "export const components = {{ data }};\nexport default components;",
+              types: { name: "ComponentKeys", key: "name" },
             },
             transform: (item) => ({
-              name: item.path.split('/').pop()?.replace(/\.tsx?$/, ''),
+              name: item.path
+                .split("/")
+                .pop()
+                ?.replace(/\.tsx?$/, ""),
               route: item.path,
-              path: item.uri
+              path: item.uri,
             }),
-            aggregate: (items) => items.reduce((acc, item) => ({ ...acc, [item.name!]: item.path }), {})
+            aggregate: (items) =>
+              items.reduce(
+                (acc, item) => ({ ...acc, [item.name!]: item.path }),
+                {},
+              ),
           },
           hooks: {
             input: { directory: "src/hooks", match: ["*.ts"] },
             output: { name: "hooks" },
             transform: (item) => ({
-              name: item.path.split('/').pop()?.replace(/\.ts$/, ''),
-              path: item.uri
+              name: item.path.split("/").pop()?.replace(/\.ts$/, ""),
+              path: item.uri,
             }),
-          }
+          },
         },
         logLevel: "info",
         chunkSize: 100,
         watch: {
           debounceTime: 1000,
-          stabilityThreshold: 300
-        }
+          stabilityThreshold: 300,
+        },
       };
     }
     ```
@@ -176,9 +203,11 @@
     ```bash
     bun run dev
     ```
+
     You should observe `[vite-autoload]` log messages in your console. During a production build (`bun run build`), `sitemap.xml` and `manifest.webmanifest` will be generated.
 
 ---
+
 ### 🤖 AI Agent Guidance
 
 ```json
@@ -208,4 +237,5 @@
 ```
 
 ---
-*Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed.*
+
+_Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed._

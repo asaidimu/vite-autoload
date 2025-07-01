@@ -12,6 +12,12 @@
     "outDir": "./dist"
   },
   "include": ["src/**/*", "./index.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "./example.config.ts", "./src/manifest","./ui"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "./example.config.ts",
+    "./src/manifest",
+    "./ui"
+  ]
 }
-

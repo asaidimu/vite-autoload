@@ -7,12 +7,14 @@ This guide covers common tasks you'll perform with `@asaidimu/vite-autoload`.
 **Goal**: Define how your application's routes (pages) and reusable modules (components, hooks) are discovered and made available programmatically.
 
 **Steps**:
+
 1.  **Identify Directories**: Determine the base directories where your pages, views, or components reside (e.g., `src/pages`, `src/components`).
 2.  **Define Match Patterns**: Use glob patterns (`*.tsx`, `**/index.ts`) to specify which files within those directories should be included. Use `ignore` for exclusions (e.g., `**/__tests__/**`).
 3.  **Choose Prefix (Optional)**: If you want to group `uri` paths under a common prefix in the generated output (e.g., `/pages/`), set the `prefix` in `input`.
 4.  **Implement `transform` Logic**: This is crucial. For each matched file, convert it into a structured object containing relevant information like a unique `route` identifier, the `path` for dynamic import, and any `metadata`.
 
 **Example: Pages Configuration**
+
 ```typescript
 // autoload.config.ts
 routes: {
@@ -73,6 +75,7 @@ modules: {
 **Method**: Use the `extract` function within your `transform` logic.
 
 **Steps**:
+
 1.  **Define Metadata in Source File**: In your `.ts`/`.tsx` file, export a constant or default object containing your metadata.
 
     ```typescript
@@ -123,12 +126,14 @@ modules: {
 **Method**: Configure the `sitemap` and `manifest` properties in your `PluginOptions`.
 
 **Steps**:
+
 1.  **Configure `sitemap`**: Specify the `output` filename, `baseUrl` (critical for absolute URLs), and optional `exclude` patterns.
-    *   The `route` property from your transformed `routes` data will be used to generate sitemap entries.
-    *   `metadata` properties like `changefreq` and `priority` from your transformed route objects will be respected if present (e.g., `metadata: { changefreq: 'daily', priority: 0.9 }`).
+    - The `route` property from your transformed `routes` data will be used to generate sitemap entries.
+    - `metadata` properties like `changefreq` and `priority` from your transformed route objects will be respected if present (e.g., `metadata: { changefreq: 'daily', priority: 0.9 }`).
 2.  **Configure `manifest`**: Provide details for your PWA, including `name`, `shortName`, `description`, `theme_color`, `background_color`, `display`, `start_url`, and `icons`.
 
 **Example Configuration**:
+
 ```typescript
 // autoload.config.ts
 export: { /* ... */ },
@@ -162,10 +167,12 @@ routes: { /* ... */ },
 **Method**: Import virtual modules using their `virtual:` prefix.
 
 **Steps**:
+
 1.  **Import**: Use a standard `import` statement with the virtual module ID (e.g., `virtual:routes`, `virtual:components`).
 2.  **Access Data**: The imported object will contain the processed data as defined by your `output.name` and `transform`/`aggregate` functions.
 
 **Example Usage**:
+
 ```typescript
 // ui/main.ts or a router file
 import { views, pages } from "virtual:routes";
@@ -174,7 +181,7 @@ import { components } from "virtual:components";
 console.log("All views:", views);
 // Example: Dynamically import a view based on a route parameter
 async function loadView(routeName: string) {
-  const view = views.find(v => v.route === routeName);
+  const view = views.find((v) => v.route === routeName);
   if (view) {
     const module = await import(view.path); // 'path' contains the dynamic import URI
     console.log(`Loaded view: ${routeName}`, module);
@@ -198,11 +205,12 @@ async function loadComponent(componentName: string) {
 }
 
 // Call example
-loadView('/counter');
-loadComponent('Button');
+loadView("/counter");
+loadComponent("Button");
 ```
 
 ---
+
 ### 🤖 AI Agent Guidance
 
 ```json
@@ -231,4 +239,5 @@ loadComponent('Button');
 ```
 
 ---
-*Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed.*
+
+_Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed._

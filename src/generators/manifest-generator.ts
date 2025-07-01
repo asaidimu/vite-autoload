@@ -1,8 +1,11 @@
-import type { ManifestConfig } from '../core/types';
-import path from 'path';
-import fs from 'fs';
+import type { ManifestConfig } from "../types";
+import path from "path";
+import fs from "fs";
 
-export function generateManifest(config: ManifestConfig, outDir: string): string {
+export function generateManifest(
+  config: ManifestConfig,
+  outDir: string,
+): string {
   const manifestContent = JSON.stringify(
     {
       name: config.name,
@@ -10,10 +13,10 @@ export function generateManifest(config: ManifestConfig, outDir: string): string
       description: config.description,
       theme_color: config.theme_color,
       background_color: config.background_color,
-      display: config.display || 'standalone',
+      display: config.display || "standalone",
       orientation: config.orientation,
-      scope: config.scope || '/',
-      start_url: config.start_url || '/',
+      scope: config.scope || "/",
+      start_url: config.start_url || "/",
       icons: config.icons || [],
       screenshots: config.screenshots,
       related_applications: config.related_applications,
@@ -21,14 +24,14 @@ export function generateManifest(config: ManifestConfig, outDir: string): string
       categories: config.categories,
       dir: config.dir,
       lang: config.lang,
-      iarc_rating_id: config.iarc_rating_id
+      iarc_rating_id: config.iarc_rating_id,
     },
     null,
-    2
+    2,
   );
 
-  const outputPath = path.join(outDir, config.output || 'manifest.webmanifest');
+  const outputPath = path.join(outDir, config.output || "manifest.webmanifest");
   fs.writeFileSync(outputPath, manifestContent);
-  
+
   return outputPath;
 }

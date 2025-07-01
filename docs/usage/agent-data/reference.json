@@ -246,9 +246,7 @@
       "definition": "type LogLevel = \"debug\" | \"info\" | \"warn\" | \"error\";",
       "purpose": "Defines the verbosity level for the plugin's internal logger.",
       "related": {
-        "methods": [
-          "method:createLogger"
-        ],
+        "methods": ["method:createLogger"],
         "patterns": []
       },
       "interfaceContract": {
@@ -276,9 +274,7 @@
       "definition": "interface FileMatchConfig {\n  readonly directory: string;\n  readonly match: Array<string> | string;\n  readonly ignore?: Array<string> | string;\n  readonly prefix?: string;\n  readonly data?: Record<string, unknown>;\n}",
       "purpose": "Configuration for specifying which files to discover and include in a module group.",
       "related": {
-        "methods": [
-          "method:resolve"
-        ],
+        "methods": ["method:resolve"],
         "patterns": []
       },
       "interfaceContract": {
@@ -311,13 +307,8 @@
       "definition": "interface ExtractOptions {\n  readonly filePath: string;\n  readonly schema: z.ZodType;\n  readonly name: string;\n}",
       "purpose": "Parameters for the `extract` function to specify file, validation schema, and target export name.",
       "related": {
-        "methods": [
-          "method:extract",
-          "method:createMetadataExtractor"
-        ],
-        "patterns": [
-          "pattern:MetadataExtraction"
-        ]
+        "methods": ["method:extract", "method:createMetadataExtractor"],
+        "patterns": ["pattern:MetadataExtraction"]
       },
       "interfaceContract": {
         "requiredMethods": [],
@@ -334,12 +325,8 @@
       "definition": "type ExtractFunction = (options: ExtractOptions) => Record<string, unknown>;",
       "purpose": "Type definition for the `extract` function used in `PluginOptions` to provide metadata extraction logic.",
       "related": {
-        "methods": [
-          "method:extract"
-        ],
-        "patterns": [
-          "pattern:MetadataExtraction"
-        ]
+        "methods": ["method:extract"],
+        "patterns": ["pattern:MetadataExtraction"]
       },
       "interfaceContract": {
         "requiredMethods": [],
@@ -395,9 +382,7 @@
       "definition": "interface ResolvedRouteModule {\n  readonly path: string;\n  readonly uri: string;\n  readonly file: string;\n}",
       "purpose": "Internal representation of a resolved file, including its relative path, import URI, and absolute file system path.",
       "related": {
-        "methods": [
-          "method:resolve"
-        ],
+        "methods": ["method:resolve"],
         "patterns": []
       },
       "interfaceContract": {
@@ -530,9 +515,7 @@
       "definition": "interface SitemapConfig {\n  readonly output: string;\n  readonly baseUrl: string;\n  readonly exclude?: ReadonlyArray<string>;\n}",
       "purpose": "Configuration for generating the `sitemap.xml` file.",
       "related": {
-        "methods": [
-          "method:generateSitemap"
-        ],
+        "methods": ["method:generateSitemap"],
         "patterns": []
       },
       "interfaceContract": {
@@ -550,9 +533,7 @@
       "definition": "interface ExportOptions {\n  readonly types?: string;\n  readonly routeLimit?: number;\n}",
       "purpose": "Options for generating supplementary output files, like TypeScript types.",
       "related": {
-        "methods": [
-          "method:generateTypes"
-        ],
+        "methods": ["method:generateTypes"],
         "patterns": []
       },
       "interfaceContract": {
@@ -569,9 +550,7 @@
       "definition": "interface WatchOptions {\n  debounceTime?: number;\n  stabilityThreshold?: number;\n}",
       "purpose": "Configuration for the internal file watcher (`chokidar`) behavior.",
       "related": {
-        "methods": [
-          "method:createFileWatcher"
-        ],
+        "methods": ["method:createFileWatcher"],
         "patterns": []
       },
       "interfaceContract": {
@@ -588,9 +567,7 @@
       "definition": "interface ManifestConfig {\n  readonly name: string;\n  readonly shortName?: string;\n  readonly description?: string;\n  readonly theme_color?: string;\n  readonly background_color?: string;\n  readonly display?: \"fullscreen\" | \"standalone\" | \"minimal-ui\" | \"browser\";\n  readonly orientation?: \"any\" | \"natural\" | \"landscape\" | \"portrait\";\n  readonly scope?: string;\n  readonly start_url?: string;\n  readonly icons?: Array<{\n    src: string;\n    sizes: string;\n    type?: string;\n    purpose?: \"any\" | \"maskable\" | \"monochrome\";\n  }>;\n  readonly screenshots?: Array<{\n    src: string;\n    sizes: string;\n    type?: string;\n    platform?: \"wide\" | \"narrow\" | \"android\" | \"ios\" | \"windows\";\n  }>;\n  readonly related_applications?: Array<{\n    platform: string;\n    url: string;\n    id?: string;\n  }>;\n  readonly prefer_related_applications?: boolean;\n  readonly categories?: Array<string>;\n  readonly dir?: \"auto\" | \"ltr\" | \"rtl\";\n  readonly lang?: string;\n  readonly iarc_rating_id?: string;\n  readonly output?: string;\n}",
       "purpose": "Configuration for generating the PWA `manifest.webmanifest` file.",
       "related": {
-        "methods": [
-          "method:generateManifest"
-        ],
+        "methods": ["method:generateManifest"],
         "patterns": []
       },
       "interfaceContract": {
@@ -623,9 +600,7 @@
       "definition": "interface PluginOptions {\n  readonly rootDir?: string;\n  readonly export?: ExportOptions;\n  readonly watch?: WatchOptions;\n  readonly sitemap?: SitemapConfig;\n  readonly manifest?: ManifestConfig;\n  readonly routes: RoutesConfig;\n  readonly modules: ModulesConfig;\n  readonly logLevel?: LogLevel;\n  readonly extract?: ExtractFunction;\n  readonly chunkSize?: number;\n}",
       "purpose": "The main configuration interface for the `@asaidimu/vite-autoload` Vite plugin, controlling all its features.",
       "related": {
-        "methods": [
-          "method:createAutoloadPlugin"
-        ],
+        "methods": ["method:createAutoloadPlugin"],
         "patterns": []
       },
       "interfaceContract": {
@@ -721,9 +696,7 @@
       "definition": "interface ResolvedFile {\n  uri: string;\n  path: string;\n  file: string;\n}",
       "purpose": "Represents a file discovered by the plugin, including its absolute URI for importing, relative path, and absolute filesystem path.",
       "related": {
-        "methods": [
-          "method:resolve"
-        ],
+        "methods": ["method:resolve"],
         "patterns": []
       },
       "interfaceContract": {
@@ -753,12 +726,8 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:PluginOptions"
-        ],
-        "patterns": [
-          "pattern:VitePluginIntegration"
-        ],
+        "types": ["type:PluginOptions"],
+        "patterns": ["pattern:VitePluginIntegration"],
         "errors": []
       }
     },
@@ -810,10 +779,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:FileMatchConfig",
-          "type:ResolvedFile"
-        ],
+        "types": ["type:FileMatchConfig", "type:ResolvedFile"],
         "patterns": [],
         "errors": []
       }
@@ -832,9 +798,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:ManifestConfig"
-        ],
+        "types": ["type:ManifestConfig"],
         "patterns": [],
         "errors": []
       }
@@ -853,9 +817,7 @@
       "availability": "async",
       "status": "active",
       "related": {
-        "types": [
-          "type:ExportOptions"
-        ],
+        "types": ["type:ExportOptions"],
         "patterns": [],
         "errors": []
       }
@@ -895,9 +857,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:SitemapConfig"
-        ],
+        "types": ["type:SitemapConfig"],
         "patterns": [],
         "errors": []
       }
@@ -942,16 +902,9 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:ExtractOptions",
-          "type:ExtractFunction"
-        ],
-        "patterns": [
-          "pattern:MetadataExtraction"
-        ],
-        "errors": [
-          "error:ZodValidationError"
-        ]
+        "types": ["type:ExtractOptions", "type:ExtractFunction"],
+        "patterns": ["pattern:MetadataExtraction"],
+        "errors": ["error:ZodValidationError"]
       }
     },
     "extract": {
@@ -968,16 +921,9 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:ExtractOptions",
-          "type:ExtractFunction"
-        ],
-        "patterns": [
-          "pattern:MetadataExtraction"
-        ],
-        "errors": [
-          "error:ZodValidationError"
-        ]
+        "types": ["type:ExtractOptions", "type:ExtractFunction"],
+        "patterns": ["pattern:MetadataExtraction"],
+        "errors": ["error:ZodValidationError"]
       }
     },
     "isJavaScriptLikeModule": {
@@ -1009,10 +955,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:GeneratorDefinition",
-          "type:RoutesConfig"
-        ],
+        "types": ["type:GeneratorDefinition", "type:RoutesConfig"],
         "patterns": [],
         "errors": []
       }
@@ -1029,10 +972,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:GeneratorDefinition",
-          "type:ModulesConfig"
-        ],
+        "types": ["type:GeneratorDefinition", "type:ModulesConfig"],
         "patterns": [],
         "errors": []
       }
@@ -1049,9 +989,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:GeneratorDefinition"
-        ],
+        "types": ["type:GeneratorDefinition"],
         "patterns": [],
         "errors": []
       }
@@ -1068,9 +1006,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:GeneratorDefinition"
-        ],
+        "types": ["type:GeneratorDefinition"],
         "patterns": [],
         "errors": []
       }
@@ -1087,9 +1023,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:LogLevel"
-        ],
+        "types": ["type:LogLevel"],
         "patterns": [],
         "errors": []
       }
@@ -1109,11 +1043,7 @@
       "availability": "sync",
       "status": "active",
       "related": {
-        "types": [
-          "type:PluginOptions",
-          "type:Logger",
-          "type:WatchOptions"
-        ],
+        "types": ["type:PluginOptions", "type:Logger", "type:WatchOptions"],
         "patterns": [],
         "errors": []
       }
@@ -1126,10 +1056,7 @@
       "logic": "IF `logLevel` is not `debug` THEN set `logLevel: 'debug'` AND re-run dev server. ELSE IF `[vite-autoload]` logs show file changes but no HMR update THEN check if the virtual module is being imported. ELSE IF virtual module is imported THEN check Vite's module graph (e.g., `server.moduleGraph.getModuleById(virtualId)`) and its `importers`. ELSE IF HMR is still not working after checking imports THEN adjust `watch.debounceTime` or `watch.stabilityThreshold` to ensure changes are fully written and processed. ELSE IF still no HMR THEN investigate potential conflicts with other Vite plugins or custom HMR logic.",
       "validationMethod": "Observe console logs for `[vite-autoload]` messages, check browser's dev tools for HMR updates, manually inspect Vite's module graph (if accessible).",
       "related": {
-        "methods": [
-          "method:createAutoloadPlugin",
-          "method:createFileWatcher"
-        ],
+        "methods": ["method:createAutoloadPlugin", "method:createFileWatcher"],
         "patterns": [],
         "errors": []
       }
@@ -1144,9 +1071,7 @@
           "method:createAutoloadPlugin",
           "method:createDefaultModuleGenerator"
         ],
-        "patterns": [
-          "pattern:ModuleConfigurationExample"
-        ],
+        "patterns": ["pattern:ModuleConfigurationExample"],
         "errors": []
       }
     },
@@ -1156,16 +1081,9 @@
       "logic": "IF metadata is not yet defined in source file THEN `export const metadata = { /* ... */ };` or `export default { /* ... */ };` in target files. THEN define a `zod` schema matching the metadata structure. THEN pass the `filePath`, `schema`, and exported `name` ('metadata' or 'default') to the `extract` function within the `transform` method of your `TransformConfig`. ELSE IF `extract` fails THEN check `ZodValidationError` for schema mismatch details.",
       "validationMethod": "Inspect the `metadata` property of the transformed objects in your virtual module (`console.log(views[0].metadata)`). Verify against your Zod schema and source file content.",
       "related": {
-        "methods": [
-          "method:extract",
-          "method:createMetadataExtractor"
-        ],
-        "patterns": [
-          "pattern:MetadataExtraction"
-        ],
-        "errors": [
-          "error:ZodValidationError"
-        ]
+        "methods": ["method:extract", "method:createMetadataExtractor"],
+        "patterns": ["pattern:MetadataExtraction"],
+        "errors": ["error:ZodValidationError"]
       }
     }
   },
@@ -1178,9 +1096,7 @@
         "validation": "Vite dev server starts without plugin errors; `[vite-autoload]` logs appear in console."
       },
       "related": {
-        "methods": [
-          "method:createAutoloadPlugin"
-        ],
+        "methods": ["method:createAutoloadPlugin"],
         "errors": []
       }
     },
@@ -1192,9 +1108,7 @@
         "validation": "`import { components } from 'virtual:components';` yields an object like `{ Button: '/components/Button.js', Input: '/components/Input.js' }`. `src/app/config/autogen.d.ts` contains `export type ComponentKeys = 'Button' | 'Input';`."
       },
       "related": {
-        "methods": [
-          "method:createDefaultModuleGenerator"
-        ],
+        "methods": ["method:createDefaultModuleGenerator"],
         "errors": []
       }
     },
@@ -1206,13 +1120,8 @@
         "validation": "The `metadata` property of the corresponding entry in the virtual module (e.g., `pages[0].metadata`) contains `{ title: 'Home Page', authRequired: false }`."
       },
       "related": {
-        "methods": [
-          "method:extract",
-          "method:createMetadataExtractor"
-        ],
-        "errors": [
-          "error:ZodValidationError"
-        ]
+        "methods": ["method:extract", "method:createMetadataExtractor"],
+        "errors": ["error:ZodValidationError"]
       }
     }
   },

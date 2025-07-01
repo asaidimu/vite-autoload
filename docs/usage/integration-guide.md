@@ -7,6 +7,7 @@ The plugin is designed to run within a Node.js environment (LTS version, v18 or 
 ## Initialization Patterns
 
 ### Integrating the `@asaidimu/vite-autoload` plugin into your Vite project's `vite.config.ts`.
+
 ```[DETECTED_LANGUAGE]
 import { defineConfig } from "vite";
 import { createAutoloadPlugin, extract } from "@asaidimu/vite-autoload";
@@ -20,6 +21,7 @@ export default defineConfig({
 ```
 
 ### Defining the `PluginOptions` in a dedicated configuration file (`autoload.config.ts`). This is where all the logic for file matching, transformation, and output generation is set up.
+
 ```[DETECTED_LANGUAGE]
 import { z } from "zod";
 import type { ExtractFunction, PluginOptions } from "@asaidimu/vite-autoload";
@@ -79,9 +81,9 @@ export default function createAutoloadConfig({ extract }: ConfigOptions): Plugin
             module: route.split("/")[0],
             metadata: extract({
               filePath: view.file,
-              schema: z.object({ 
-                title: z.string(), 
-                description: z.string().optional() 
+              schema: z.object({
+                title: z.string(),
+                description: z.string().optional()
               }),
               name: "metadata",
             }),
@@ -157,9 +159,11 @@ export default function createAutoloadConfig({ extract }: ConfigOptions): Plugin
 ## Common Integration Pitfalls
 
 - **Issue**: Incorrect `rootDir` or relative paths.
+
   - **Solution**: Ensure `rootDir` is correctly set if your `autoload.config.ts` is not in the project root. All relative paths for `export.types` should be relative to `rootDir`.
 
 - **Issue**: File watcher not triggering HMR.
+
   - **Solution**: Ensure your application code actually imports the virtual modules (e.g., `virtual:routes`). The plugin needs this dependency chain to correctly invalidate modules. Also, verify `watch.debounceTime` and `watch.stabilityThreshold` settings are appropriate for your environment.
 
 - **Issue**: Metadata extraction failing or returning `null`.
@@ -169,15 +173,14 @@ export default function createAutoloadConfig({ extract }: ConfigOptions): Plugin
 
 The plugin's lifecycle is tightly integrated with Vite's build and development server hooks:
 
-*   **`configResolved`**: Used to capture Vite's final configuration.
-*   **`configureServer` (Dev)**: Initializes internal generators, populates caches, and starts the file watcher. This must complete before HMR can function.
-*   **`buildStart` (Build)**: Initializes generators for production, resolves module paths, and emits them as Vite chunks.
-*   **`resolveId` & `load`**: Handle requests for virtual modules (`virtual:...`). These need to be active for your application to import the generated data.
-*   **`transform`**: Analyzes importer modules to establish dependencies on virtual modules, crucial for fine-grained HMR updates.
-*   **`handleHotUpdate`**: Responds to file changes by invalidating relevant modules and triggering HMR updates.
-*   **`closeBundle` (Build)**: Generates `sitemap.xml`, `manifest.webmanifest`, and TypeScript types after the main build process is complete.
-
-
+- **`configResolved`**: Used to capture Vite's final configuration.
+- **`configureServer` (Dev)**: Initializes internal generators, populates caches, and starts the file watcher. This must complete before HMR can function.
+- **`buildStart` (Build)**: Initializes generators for production, resolves module paths, and emits them as Vite chunks.
+- **`resolveId` & `load`**: Handle requests for virtual modules (`virtual:...`). These need to be active for your application to import the generated data.
+- **`transform`**: Analyzes importer modules to establish dependencies on virtual modules, crucial for fine-grained HMR updates.
+- **`handleHotUpdate`**: Responds to file changes by invalidating relevant modules and triggering HMR updates.
+- **`closeBundle` (Build)**: Generates `sitemap.xml`, `manifest.webmanifest`, and TypeScript types after the main build process is complete.
 
 ---
-*Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed.*
+
+_Generated using Gemini AI on 6/28/2025, 2:57:15 PM. Review and refine as needed._
