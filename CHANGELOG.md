@@ -1,3 +1,15 @@
+# [4.0.0](https://github.com/asaidimu/vite-autoload/compare/v3.1.0...v4.0.0) (2025-07-01)
+
+
+* feat(plugin)!: overhaul plugin configuration with unified component model ([539eadc](https://github.com/asaidimu/vite-autoload/commit/539eadca4838cf0dbca957a254f93950b6fbe90c))
+
+
+### BREAKING CHANGES
+
+* The `routes` and `modules` properties at the root level of `PluginOptions` have been removed.
+Plugin configuration now requires a `settings` object for global options and a `components` array to define module groups.
+Refer to `example.config.ts` and `README.md` for updated configuration structure and migration guidance.
+
 # [3.1.0](https://github.com/asaidimu/vite-autoload/compare/v3.0.1...v3.1.0) (2025-06-28)
 
 
