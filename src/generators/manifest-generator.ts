@@ -2,10 +2,14 @@ import type { ManifestConfig } from "../types";
 import path from "path";
 import fs from "fs";
 
+import { Logger } from "../utils/logger";
+
 export async function generateManifest(
   config: ManifestConfig,
   outDir: string,
+  logger?: Logger,
 ): Promise<string> {
+  logger?.debug("Generating web manifest...");
   const manifestContent = JSON.stringify(
     {
       name: config.name,

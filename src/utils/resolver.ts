@@ -14,7 +14,8 @@ export type ResolvedFiles = {
   files: Array<ResolvedFile>;
 };
 
-export function resolve(config: FileMatchConfig): Array<ResolvedFile> {
+export function resolve(config: FileMatchConfig, logger?: Logger): Array<ResolvedFile> {
+  logger?.debug(`Resolving files for directory: ${config.directory}, match: ${config.match}`);
   const ignore = config.ignore
     ? Array.isArray(config.ignore)
       ? config.ignore
@@ -27,6 +28,8 @@ export function resolve(config: FileMatchConfig): Array<ResolvedFile> {
     absolute: true,
     onlyFiles: true,
   });
+
+  logger?.debug(`Found ${files.length} files in ${config.directory} matching ${config.match}`);
 
   const result = files.map((file) => {
     const relativePath = path.relative(config.directory, file);
@@ -72,7 +75,8 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
       initializeGroupCache();
 
       for (const groupConfig of config) {
-        const entries = resolve(groupConfig.input as FileMatchConfig);
+        logger?.debug(`Resolving files for group: ${groupConfig.name}`);
+        const entries = resolve(groupConfig.input as FileMatchConfig, logger);
         const groupFiles = groupCache.get(groupConfig.name)!;
 
         for (const entry of entries) {

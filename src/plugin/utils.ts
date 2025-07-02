@@ -1,71 +1,21 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import * as crypto from "crypto";
 import { generateTypes } from "../generators/types-generator";
+import { Logger } from "../utils/logger";
 import { generateManifest } from "../generators/manifest-generator";
 import { generateSitemap } from "../generators/sitemap-generator";
 import { PluginContext } from "./types";
-import { ResolvedFile } from "../types/transform";
+import { fnv1a64Hash } from "../utils/hash";
 
 /**
  * Calculates a hash for any data structure, including file content hashes for ResolvedFile objects.
  */
-export const getDataHash = async (data: any): Promise<string> => {
-  const hash = crypto.createHash("sha256");
-  hash.update(JSON.stringify(data));
-
-  // If the data contains ResolvedFile objects, hash their content
-  if (Array.isArray(data)) {
-    for (const item of data) {
-      if (item && typeof item === "object") {
-        for (const key in item) {
-          if (isResolvedFile(item[key])) {
-            try {
-              const fileContent = await fs.readFile(item[key].path, "utf-8");
-              hash.update(fileContent);
-            } catch (error) {
-              console.warn(`Could not read file ${item[key].path}:`, error);
-            }
-          }
-        }
-      }
-    }
-  } else if (typeof data === "object" && data !== null) {
-    for (const key in data) {
-      if (isResolvedFile(data[key])) {
-        try {
-          const fileContent = await fs.readFile(data[key].path, "utf-8");
-          hash.update(fileContent);
-        } catch (error) {
-          console.warn(`Could not read file ${data[key].path}:`, error);
-        }
-      } else if (Array.isArray(data[key])) {
-        for (const item of data[key]) {
-          if (isResolvedFile(item)) {
-            try {
-              const fileContent = await fs.readFile(item.path, "utf-8");
-              hash.update(fileContent);
-            } catch (error) {
-              console.warn(`Could not read file ${item.path}:`, error);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return hash.digest("hex");
+export const getDataHash = async (data: any, logger?: Logger): Promise<string> => {
+  logger?.debug("Calculating data hash...");
+  const finalHash = fnv1a64Hash(data)
+  logger?.debug(`Data hash calculated: ${finalHash}`);
+  return finalHash;
 };
-
-function isResolvedFile(obj: any): obj is ResolvedFile {
-  return (
-    typeof obj === "object" &&
-    obj !== null &&
-    "uri" in obj &&
-    "path" in obj &&
-    "file" in obj
-  );
-}
 
 /**
  * Checks if a virtual module's content has changed based on its data hash.
@@ -74,17 +24,19 @@ export const hasVirtualModuleChanged = async (
   ctx: PluginContext,
   moduleName: string,
 ): Promise<boolean> => {
+  const { logger } = ctx;
+  logger.debug(`Checking if virtual module ${moduleName} has changed...`);
   const found = ctx.nameIndex.lookup(moduleName);
 
   if (!found) {
-    ctx.logger.warn(`Virtual module ${moduleName} not found in NameIndex.`);
+    logger.warn(`Virtual module ${moduleName} not found in NameIndex.`);
     return false;
   }
 
   // Find the generator for the component
   const generator = ctx.generators.find((g) => g.name === found.component);
   if (!generator) {
-    ctx.logger.error(`Generator for component ${found.component} not found.`);
+    logger.error(`Generator for component ${found.component} not found.`);
     return false;
   }
 
@@ -95,13 +47,17 @@ export const hasVirtualModuleChanged = async (
   };
 
   const currentData = await generator.data(dataContext);
-  const currentHash = await getDataHash(currentData);
+  const currentHash = await getDataHash(currentData, logger);
   const previousHash = ctx.virtualModuleCache.get(moduleName);
+
+  logger.debug(`Module ${moduleName}: Current hash: ${currentHash}, Previous hash: ${previousHash}`);
 
   const hasChanged = previousHash !== currentHash;
   if (hasChanged) {
     ctx.virtualModuleCache.set(moduleName, currentHash);
-    ctx.logger.debug(`Virtual module ${moduleName} has changed`);
+    logger.debug(`Virtual module ${moduleName} has changed`);
+  } else {
+    logger.debug(`Virtual module ${moduleName} has NOT changed`);
   }
   return hasChanged;
 };
@@ -147,7 +103,7 @@ export async function regenerateTypes(ctx: PluginContext) {
     }
 
     if (Object.keys(types).length > 0) {
-      await generateTypes(output, types);
+      await generateTypes(output, types, logger);
       logger.info(
         `Types generated successfully (processed ${totalTypesCount} items)`,
       );
@@ -184,7 +140,7 @@ export async function emitSitemap(this: any, ctx: PluginContext) {
         });
     }
   };
-  const sitemap = generateSitemap(sitemapEntries, baseUrl, exclude);
+  const sitemap = generateSitemap(sitemapEntries, baseUrl, exclude, ctx.logger);
 
   const outputPath = path.join(ctx.config.build.outDir, "sitemap.xml");
   await fs.writeFile(outputPath, sitemap, "utf-8");
@@ -196,6 +152,6 @@ export async function emitSitemap(this: any, ctx: PluginContext) {
  */
 export async function emitManifest(ctx: PluginContext) {
   if (ctx.options.settings.manifest) {
-    await generateManifest(ctx.options.settings.manifest, ctx.config.build.outDir);
+    await generateManifest(ctx.options.settings.manifest, ctx.config.build.outDir, ctx.logger);
   }
 }

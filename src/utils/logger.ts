@@ -1,4 +1,5 @@
-import type { LogLevel } from "../types";
+import { LogLevel } from "../types/plugin";
+import type { Logger as ViteLogger } from "vite";
 
 export interface Logger {
   readonly debug: (message: string, ...args: unknown[]) => void;
@@ -7,41 +8,37 @@ export interface Logger {
   readonly error: (message: string, error?: Error | unknown) => void;
 }
 
-export function createLogger(level: LogLevel = "info"): Logger {
-  const levels: LogLevel[] = ["debug", "info", "warn", "error"];
+export function createLogger(viteLogger: ViteLogger, logLevel: LogLevel = "info"): Logger {
+  const levels: Record<LogLevel, number> = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+  };
 
-  function shouldLog(messageLevel: LogLevel): boolean {
-    return levels.indexOf(messageLevel) >= levels.indexOf(level);
-  }
-
-  function debug(message: string, ...args: unknown[]): void {
-    if (shouldLog("debug")) {
-      console.debug(`[vite-autoload] ${message}`, ...args);
-    }
-  }
-
-  function info(message: string, ...args: unknown[]): void {
-    if (shouldLog("info")) {
-      console.info(`[vite-autoload] ${message}`, ...args);
-    }
-  }
-
-  function warn(message: string, ...args: unknown[]): void {
-    if (shouldLog("warn")) {
-      console.warn(`[vite-autoload] ${message}`, ...args);
-    }
-  }
-
-  function error(message: string, error?: Error | unknown): void {
-    if (shouldLog("error")) {
-      console.error(`[vite-autoload] ${message}`, error);
-    }
-  }
+  const currentLevel = levels[logLevel];
 
   return {
-    debug,
-    info,
-    warn,
-    error,
+    debug: (message, ...args) => {
+      if (currentLevel <= levels.debug) {
+        viteLogger.info(`[vite-autoload] DEBUG: ${message} ${args.join(" ")}`);
+      }
+    },
+    info: (message, ...args) => {
+      if (currentLevel <= levels.info) {
+        viteLogger.info(`[vite-autoload] INFO: ${message} ${args.join(" ")}`);
+      }
+    },
+    warn: (message, ...args) => {
+      if (currentLevel <= levels.warn) {
+        viteLogger.warn(`[vite-autoload] WARN: ${message} ${args.join(" ")}`);
+      }
+    },
+    error: (message, error) => {
+      if (currentLevel <= levels.error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        viteLogger.error(`[vite-autoload] ERROR: ${message} ${errorMessage}`);
+      }
+    },
   };
 }

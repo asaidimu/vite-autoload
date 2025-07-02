@@ -1,27 +1,12 @@
 {
   "name": "@asaidimu/vite-autoload",
   "version": "1.0.0",
-  "description": "Enhanced Vite plugin for automatic route and module loading",
-  "main": "dist/index.js",
-  "type": "module",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "ci": "bun install",
-    "dev": "vite",
-    "clean": "[ -e ./dist ] && rm -rf ./dist || echo No dist",
-    "prebuild": "bun clean && bun run .sync-package.ts",
-    "build": "tsc",
-    "postbuild": "cp README.md LICENSE.md ./dist && cp ./dist.package.json ./dist/package.json && cp ./example.config.ts ./dist"
-  },
-  "keywords": [
-    "typescript"
-  ],
   "author": "Saidimu <47994458+asaidimu@users.noreply.github.com>",
-  "license": "MIT",
-  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asaidimu/vite-autoload.git"
+  },
+  "main": "dist/index.js",
   "devDependencies": {
     "@babel/parser": "^7.28.0",
     "@babel/traverse": "^7.28.0",
@@ -42,14 +27,18 @@
     "vite": "^7.0.0",
     "zod": "^3.25.67"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/asaidimu/vite-autoload.git"
-  },
   "bugs": {
     "url": "https://github.com/asaidimu/vite-autoload/issues"
   },
+  "description": "Enhanced Vite plugin for automatic route and module loading",
+  "files": [
+    "dist"
+  ],
   "homepage": "https://github.com/asaidimu/vite-autoload#readme",
+  "keywords": [
+    "typescript"
+  ],
+  "license": "MIT",
   "release": {
     "branches": [
       "main"
@@ -80,5 +69,15 @@
         }
       ]
     ]
-  }
+  },
+  "scripts": {
+    "ci": "bun install",
+    "dev": "vite",
+    "clean": "[ -e ./dist ] && rm -rf ./dist || echo No dist",
+    "prebuild": "bun clean && bun run .sync-package.ts",
+    "build": "tsc",
+    "postbuild": "cp README.md LICENSE.md ./dist && cp ./dist.package.json ./dist/package.json && cp ./example.config.ts ./dist"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts"
 }

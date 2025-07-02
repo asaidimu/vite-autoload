@@ -10,20 +10,19 @@ import {
   transformImporterModule,
 } from "./hmr";
 import { PluginOptions } from "../types";
-import { createLogger } from "../utils/logger";
+import { createLogger } from "../utils/logger"; // Import our custom createLogger
 import { PluginContext } from "./types";
 import { NameIndex } from "../utils/name-index"; // Import NameIndex
 
 export function createAutoloadPlugin(options: PluginOptions): Plugin {
-  const logger = createLogger(options.settings.logLevel);
-
   // Initialize NameIndex
   const nameIndex = new NameIndex(options.components);
 
   // Shared state is encapsulated in the context object
   const ctx: PluginContext = {
     options,
-    logger,
+    // logger will be set in configResolved
+    logger: undefined!,
     config: undefined!,
     server: undefined,
     generators: options.components.map((component) => {
@@ -36,11 +35,7 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     nameIndex, // Add NameIndex to context
   };
 
-  const fileWatcher = createFileWatcher(
-    options,
-    logger,
-    createHmrFileWatcherCallback(ctx),
-  );
+  let fileWatcher: ReturnType<typeof createFileWatcher>;
 
   return {
     name: "vite-plugin-autoload",
@@ -48,6 +43,13 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
     // HOOK: Set up config and server context
     configResolved(resolvedConfig) {
       ctx.config = resolvedConfig;
+      // Create our custom logger, passing Vite's logger and our desired logLevel
+      ctx.logger = createLogger(resolvedConfig.logger, options.settings.logLevel);
+      fileWatcher = createFileWatcher(
+        options,
+        ctx.logger,
+        createHmrFileWatcherCallback(ctx),
+      );
     },
     async configureServer(server) {
       ctx.server = server;

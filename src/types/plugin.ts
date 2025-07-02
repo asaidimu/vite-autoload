@@ -41,12 +41,14 @@ export interface PluginOptions {
     sitemap?: SitemapConfig;
     /** Configuration for the web app manifest. */
     manifest?: ManifestConfig;
-    /** The logging level for the system's output. */
-    logLevel?: LogLevel;
     /** An optional function to extract data from files based on a schema. */
     extract?: ExtractFunction;
     /** An optional chunk size for processing or bundling operations. */
     chunkSize?: number;
+    /**
+     * Log level for controlling verbosity of output.
+     */
+    logLevel?: LogLevel;
   };
   /**
    * Configuration for defining and transforming various modules or collections of data.

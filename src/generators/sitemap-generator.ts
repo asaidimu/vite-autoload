@@ -17,10 +17,13 @@ interface SitemapUrl {
   readonly priority: number;
 }
 
+import { Logger } from "../utils/logger";
+
 export function generateSitemap(
   routes: ReadonlyArray<SitemapEntry>,
   baseUrl: string,
   exclude: ReadonlyArray<string> = [],
+  logger?: Logger,
 ): string {
   const date = new Date().toISOString();
 

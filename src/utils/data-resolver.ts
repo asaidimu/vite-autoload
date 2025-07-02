@@ -17,28 +17,39 @@ export function createDataResolver(options: DataResolverOptions): DataResolver {
   const dataCache = new Map<string, any>(); // Map<groupName, Data>
 
   async function initialize(): Promise<void> {
+    logger?.debug("Initializing data resolver...");
     dataCache.clear();
     for (const groupConfig of config) {
       // Check if the input is a function (DataSource)
       if (typeof groupConfig.input === 'function') {
+        logger?.debug(`Attempting to resolve data for group: ${groupConfig.name}`);
         try {
           const dataSource = groupConfig.input as DataSource<any>;
           const data = await Promise.resolve(dataSource());
           dataCache.set(groupConfig.name, data);
-          logger?.debug(`Resolved data for group ${groupConfig.name}`);
+          logger?.debug(`Successfully resolved and cached data for group: ${groupConfig.name}`);
         } catch (error) {
           logger?.error(`Failed to resolve data for group ${groupConfig.name}`, error);
           throw error;
         }
       }
     }
+    logger?.debug("Data resolver initialization complete.");
   }
 
   function getData(groupName: string): any | undefined {
-    return dataCache.get(groupName);
+    logger?.debug(`Retrieving data for group: ${groupName}`);
+    const data = dataCache.get(groupName);
+    if (data) {
+      logger?.debug(`Found data for group: ${groupName}`);
+    } else {
+      logger?.debug(`No data found for group: ${groupName}`);
+    }
+    return data;
   }
 
   function getAllData(): Record<string, any> {
+    logger?.debug("Retrieving all data from cache.");
     return Object.fromEntries(dataCache);
   }
 

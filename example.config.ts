@@ -106,7 +106,7 @@ export default function createAutoloadConfig({
         ],
         output: "manifest.webmanifest",
       },
-      logLevel: "info",
+      logLevel: "debug",
       extract: extract,
     },
     components: [routes],
