@@ -1,3 +1,10 @@
+# [6.1.0](https://github.com/asaidimu/vite-autoload/compare/v6.0.0...v6.1.0) (2025-07-02)
+
+
+### Features
+
+* **example:** add comprehensive React UI starter template ([09ca5bf](https://github.com/asaidimu/vite-autoload/commit/09ca5bf3962779aec8d1082382dabfb55cb3a2d1))
+
 # [6.0.0](https://github.com/asaidimu/vite-autoload/compare/v5.0.0...v6.0.0) (2025-07-02)
 
 
