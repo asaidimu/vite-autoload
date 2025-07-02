@@ -91,7 +91,7 @@ export const hasVirtualModuleChanged = async (
   // Pass the group name if it exists, otherwise undefined (for component-level modules)
   const dataContext = {
     production: false,
-    name: found.group || undefined,
+    name: found.group ? moduleName : undefined
   };
 
   const currentData = await generator.data(dataContext);

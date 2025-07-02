@@ -31,7 +31,7 @@ export async function initializeDevServer(
   for (const generator of generators) {
     const data = await generator.data({ production: false });
     for (const name of Object.keys(data)) {
-      virtualModuleCache.set(name, getDataHash(data[name]));
+      virtualModuleCache.set(name, await getDataHash(data[name]));
     }
   }
 
