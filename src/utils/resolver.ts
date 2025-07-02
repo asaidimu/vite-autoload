@@ -1,9 +1,14 @@
 import glob from "fast-glob";
 import path from "path";
-import type { TransformConfig, FileMatchConfig, ResolvedFile } from "../types";
+import type {
+  TransformConfig,
+  FileMatchConfig,
+  ResolvedFile,
+} from "../types";
 import { CacheManager } from "./cache";
 import { Logger } from "./logger";
 import pico from "picomatch";
+import { createUriTransformer } from "./uri";
 
 export type ResolvedFiles = {
   name: string;
@@ -55,6 +60,7 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
 
   // Internal cache structure: Map<groupName, Map<filePath, ResolvedFile>>
   const groupCache = new Map<string, Map<string, ResolvedFile>>();
+  const uriTransformer = createUriTransformer();
 
   function initializeGroupCache(): void {
     groupCache.clear();
@@ -145,7 +151,6 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
 
   function getAllEntries(): ReadonlyArray<ResolvedFiles> {
     const result: ResolvedFiles[] = [];
-
     for (const groupConfig of config) {
       const groupFiles = groupCache.get(groupConfig.name);
       const files = groupFiles ? Array.from(groupFiles.values()) : [];

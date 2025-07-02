@@ -22,9 +22,10 @@ export default function createAutoloadConfig({
     input: {
       directory: "ui",
       match: ["*.ts"],
+      ignore: ["*.d.ts"],
     },
     output: {},
-    transform: (item: ResolvedFile) => {
+    transform: async (item: ResolvedFile) => {
       const route = item.path
         .replace(/.*modules/, "")
         .replace(/\\/g, "/")
@@ -36,7 +37,7 @@ export default function createAutoloadConfig({
           route.length === 1 ? route : route.replace(new RegExp("/?$"), ""),
         path: item.uri,
         module: route.split("/")[0],
-        metadata: extract({
+        metadata: await extract({
           filePath: item.file,
           schema: z.unknown(),
           name: "metadata",
@@ -51,27 +52,22 @@ export default function createAutoloadConfig({
     description:
       "Defines the routing structure and data for application views and pages.",
     strategy: {
-      // Assuming a 'unified' strategy for routes to allow combined sitemap/type generation if needed
-      type: "split",
       sitemap: {
-        property: "route", // Assuming the aggregated data will have a 'route' property for sitemap entries
+        property: "route",
       },
       types: {
         name: "AppRouteData", // Name for the generated type
         property: "route", // Property to use for type generation
       },
     },
-    groups: [
-      viewsTransformConfig,
-      { ...viewsTransformConfig, name: "pages" }, // duplicate views
-    ],
+    groups: [viewsTransformConfig],
   };
 
   return {
     settings: {
       rootDir: process.cwd(),
       export: {
-        types: "src/app/config/autogen.d.ts",
+        types: "ui/autogen.d.ts",
       },
       sitemap: {
         output: "sitemap.xml",

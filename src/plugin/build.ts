@@ -1,5 +1,5 @@
 import { PluginContext } from "./types";
-import { emitSitemap, emitManifest } from "./utils";
+import { emitSitemap, emitManifest, regenerateTypes } from "./utils";
 
 /**
  * Emits production chunks for all module files.
@@ -8,17 +8,19 @@ import { emitSitemap, emitManifest } from "./utils";
 export async function runBuildStart(this: any, ctx: PluginContext) {
   if (!ctx.config.isProduction) return;
 
+  regenerateTypes(ctx);
+
   const emit = this.emitFile.bind(this);
-  const moduleFiles = ctx.generators
-    .map((g) => g.modules({ production: true }))
-    .flat();
+  const moduleFiles = await Promise.all(
+    ctx.generators.map(async (g) => g.modules({ production: true })),
+  ).then((files) => files.flat());
 
   moduleFiles.forEach((element) => {
     emit({
       type: "chunk",
       id: element.file,
       preserveSignature: "exports-only",
-      fileName: element.uri.replace(/^\/+/g, ""),
+      fileName: element.uri.replace(/^\/+/g, "")
     });
   });
 }
@@ -28,8 +30,8 @@ export async function runBuildStart(this: any, ctx: PluginContext) {
  * This is called from the `closeBundle` hook.
  */
 export async function runCloseBundle(this: any, ctx: PluginContext) {
-  emitManifest(ctx);
-  emitSitemap.call(this, ctx);
+  await emitManifest(ctx);
+  await emitSitemap.call(this, ctx);
 }
 
 /**

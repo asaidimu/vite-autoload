@@ -145,3 +145,5 @@ coverage/
 .DS_Store
 .readme.md
 .commit-message.md
+docs/.response.json
+ui/autogen.d.ts

@@ -1,4 +1,5 @@
-import path from "path";
+import * as fs from "fs/promises";
+import * as path from "path";
 import { generateTypes } from "../generators/types-generator";
 import { generateManifest } from "../generators/manifest-generator";
 import { generateSitemap } from "../generators/sitemap-generator";
@@ -14,14 +15,14 @@ export const getDataHash = (data: any): string => {
 /**
  * Checks if a virtual module's content has changed based on its data hash.
  */
-export const hasVirtualModuleChanged = (
+export const hasVirtualModuleChanged = async (
   ctx: PluginContext,
   name: string,
-): boolean => {
+): Promise<boolean> => {
   const generator = ctx.generators.find((g) => g.name === name);
   if (!generator) return false;
 
-  const currentData = generator.data({ production: false });
+  const currentData = await generator.data({ production: false });
   const currentHash = getDataHash(currentData);
   const previousHash = ctx.virtualModuleCache.get(name);
 
@@ -49,12 +50,11 @@ export async function regenerateTypes(ctx: PluginContext) {
     const types: { [key: string]: any } = {};
     let totalTypesCount = 0;
 
-    options.components.forEach((component, index) => {
+    for (const [index, component] of options.components.entries()) {
       if (component.strategy.types) {
         const generator = generators[index];
-        const data = generator.data({ production: false });
+        const data = await generator.data({ production: false });
         const { name, property } = component.strategy.types;
-
         const collectedTypes = Object.values(data)
           .flat()
           .map((item: any) => item && item[property])
@@ -65,7 +65,7 @@ export async function regenerateTypes(ctx: PluginContext) {
           totalTypesCount += collectedTypes.length;
         }
       }
-    });
+    }
 
     if (Object.keys(types).length > 0) {
       await generateTypes(output, types);
@@ -81,16 +81,16 @@ export async function regenerateTypes(ctx: PluginContext) {
 /**
  * Generates the sitemap.xml file.
  */
-export function emitSitemap(this: any, ctx: PluginContext) {
+export async function emitSitemap(this: any, ctx: PluginContext) {
   if (!ctx.options.settings.sitemap || !ctx.config.isProduction) return;
 
   const { baseUrl, exclude = [] } = ctx.options.settings.sitemap;
   const sitemapEntries: { route: string; metadata: any }[] = [];
 
-  ctx.options.components.forEach((component, index) => {
+  for (const [index, component] of ctx.options.components.entries()) {
     if (component.strategy.sitemap) {
       const generator = ctx.generators[index];
-      const data = generator.data({ production: true });
+      const data = await generator.data({ production: true });
       const property = component.strategy.sitemap.property;
 
       Object.values(data)
@@ -104,21 +104,19 @@ export function emitSitemap(this: any, ctx: PluginContext) {
           }
         });
     }
-  });
-
+  };
   const sitemap = generateSitemap(sitemapEntries, baseUrl, exclude);
-  this.emitFile({
-    type: "asset",
-    fileName: "sitemap.xml",
-    source: sitemap,
-  });
+
+  const outputPath = path.join(ctx.config.build.outDir, "sitemap.xml");
+  await fs.writeFile(outputPath, sitemap, "utf-8");
+  ctx.logger.info(`Sitemap written to ${outputPath}`);
 }
 
 /**
  * Generates the web manifest file.
  */
-export function emitManifest(ctx: PluginContext) {
+export async function emitManifest(ctx: PluginContext) {
   if (ctx.options.settings.manifest) {
-    generateManifest(ctx.options.settings.manifest, ctx.config.build.outDir);
+    await generateManifest(ctx.options.settings.manifest, ctx.config.build.outDir);
   }
 }

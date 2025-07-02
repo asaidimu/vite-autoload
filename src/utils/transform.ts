@@ -5,6 +5,7 @@ import type {
   BuildContext,
   FileMatchConfig,
 } from "../types";
+import { ResolvedFiles } from "./resolver";
 import { createUriTransformer } from "./uri";
 
 export interface DataProcessorOptions {
@@ -13,9 +14,9 @@ export interface DataProcessorOptions {
 
 export interface DataProcessor {
   readonly processEntries: (
-    entries: ReadonlyArray<ResolvedFile>,
+    entries: ReadonlyArray<ResolvedFiles>,
     context: BuildContext,
-  ) => Record<string, Array<any>>;
+  ) => Promise<Record<string, Array<any>>>;
 }
 
 export function createDataProcessor(
@@ -31,15 +32,13 @@ export function createDataProcessor(
     context: BuildContext,
     allData: Record<string, Array<any>>,
   ): any {
-    const { module, ...fileData } = entry as any; // TODO: that pesky `module`
-
     const transformedUri = uriTransformer.transform({
       uri: entry.uri,
       prefix: (moduleConfig.input as FileMatchConfig).prefix,
       production: context.production,
     });
 
-    const transformedEntry = { ...fileData, uri: transformedUri };
+    const transformedEntry = { ...entry, uri: transformedUri };
 
     if (moduleConfig.transform) {
       const transformContext: TransformContext = {
@@ -56,28 +55,18 @@ export function createDataProcessor(
     return transformedEntry; // Default return if no transform function
   }
 
-  function groupEntriesByModule(
-    entries: ReadonlyArray<ResolvedFile>,
-  ): Record<string, ResolvedFile[]> {
-    return entries.reduce(
-      // TODO: pesky module again
-      (groups, entry: any) => {
-        if (!groups[entry.module]) {
-          groups[entry.module] = [];
-        }
-        groups[entry.module].push(entry);
-        return groups;
-      },
-      {} as Record<string, ResolvedFile[]>,
-    );
-  }
-
-  function processEntries(
-    entries: ReadonlyArray<ResolvedFile>,
+  async function processEntries(
+    entries: ReadonlyArray<ResolvedFiles>,
     context: BuildContext,
-  ): Record<string, Array<any>> {
+  ): Promise<Record<string, Array<any>>> {
     const result: Record<string, Array<any>> = {};
-    const groupedEntries = groupEntriesByModule(entries);
+    const groupedEntries = entries.reduce(
+      (acc, cur) => {
+        acc[cur.name] = cur.files;
+        return acc;
+      },
+      {} as Record<string, Array<any>>,
+    );
 
     // First pass: transform all entries
     for (const [moduleKey, moduleEntries] of Object.entries(groupedEntries)) {
@@ -87,16 +76,19 @@ export function createDataProcessor(
         continue;
       }
 
-      result[moduleKey] = moduleEntries.map((entry) =>
-        transformEntry(entry, moduleConfig, context, result),
+      const transformedEntries = await Promise.all(
+        moduleEntries.map((entry) =>
+          transformEntry(entry, moduleConfig, context, result),
+        ),
       );
+      result[moduleKey] = transformedEntries;
     }
 
     // Second pass: apply aggregation functions
     for (const [moduleKey, moduleData] of Object.entries(result)) {
       const moduleConfig = configMap.get(moduleKey);
       if (moduleConfig?.aggregate) {
-        const aggregatedData = moduleConfig.aggregate(moduleData);
+        const aggregatedData = await moduleConfig.aggregate(moduleData);
         result[moduleKey] = aggregatedData;
       }
     }

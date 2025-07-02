@@ -337,11 +337,12 @@ export function createMetadataExtractor(
   });
 
   return {
-    extract(filePath: string) {
+    async extract(filePath: string) {
       try {
+        const fileContent = await fs.promises.readFile(filePath, "utf-8");
         const sourceFile = ts.createSourceFile(
           filePath,
-          fs.readFileSync(filePath, "utf-8"),
+          fileContent,
           ts.ScriptTarget.Latest,
           true,
         );
@@ -413,8 +414,8 @@ type Props = {
   name: string;
 };
 
-export function extract<T>({ filePath, schema, name }: Props) {
+export async function extract<T>({ filePath, schema, name }: Props) {
   const extractor = createMetadataExtractor(schema, { exportName: name });
-  const value = extractor.extract(filePath);
+  const value = await extractor.extract(filePath);
   return value as T;
 }

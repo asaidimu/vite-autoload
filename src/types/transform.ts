@@ -59,7 +59,7 @@ export interface ExtractOptions {
  */
 export type ExtractFunction = (
   options: ExtractOptions,
-) => Record<string, unknown>;
+) => Promise<Record<string, unknown>>;
 
 /**
  * Defines a complete data transformation pipeline from input files to transformed and aggregated output.
@@ -100,13 +100,13 @@ export interface TransformConfig<
     item: ResolvedFile | InputData,
     context: TransformContext,
     metadata?: Record<string, Record<string, unknown>>,
-  ) => TransformedOutput;
+  ) => TransformedOutput | Promise<TransformedOutput>;
   /**
    * An optional function to aggregate all transformed items.
    * Additional metadata can be passed to the aggregation function.
    */
   aggregate?: (
-    items: TransformedOutput[],
+    items: Array<TransformedOutput | Promise<TransformedOutput>>,
     metadata?: Record<string, Record<string, unknown>>,
-  ) => AggregatedOutput;
+  ) => AggregatedOutput | Promise<AggregatedOutput>;
 }

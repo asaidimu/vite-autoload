@@ -40,10 +40,10 @@ export async function loadVirtualModule(
   const isProduction = ctx.config.isProduction;
   const generator = ctx.generators.find((g) => g.find(name));
   if (generator) {
-    return generator.code({
+    return (await generator.code({
       production: isProduction,
       name: found.group ? name : undefined,
-    }) as string;
+    })) as string;
   }
 
   return null;

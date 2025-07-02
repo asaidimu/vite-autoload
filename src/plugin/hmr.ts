@@ -28,12 +28,12 @@ export async function initializeDevServer(
 ) {
   const { server, generators, virtualModuleCache } = ctx;
 
-  generators.forEach((generator) => {
-    const data = generator.data({ production: false });
+  for (const generator of generators) {
+    const data = await generator.data({ production: false });
     for (const name of Object.keys(data)) {
       virtualModuleCache.set(name, getDataHash(data[name]));
     }
-  });
+  }
 
   updateDependencyMappings(ctx);
 
@@ -147,14 +147,14 @@ async function handleVirtualModuleStructureChange(ctx: PluginContext) {
 
   const changedVirtualModules = new Set<string>();
 
-  ctx.generators.forEach((generator) => {
-    const data = generator.data({ production: false });
+  for (const generator of ctx.generators) {
+    const data = await generator.data({ production: false });
     for (const moduleName of Object.keys(data)) {
-      if (hasVirtualModuleChanged(ctx, moduleName)) {
+      if (await hasVirtualModuleChanged(ctx, moduleName)) {
         changedVirtualModules.add(`virtual:${moduleName}`);
       }
     }
-  });
+  }
 
   updateDependencyMappings(ctx);
 
@@ -183,7 +183,7 @@ async function handleVirtualModuleStructureChange(ctx: PluginContext) {
         }
       }
     }
-    regenerateTypes(ctx);
+    await regenerateTypes(ctx);
   }
 }
 

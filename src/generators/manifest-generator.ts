@@ -2,10 +2,10 @@ import type { ManifestConfig } from "../types";
 import path from "path";
 import fs from "fs";
 
-export function generateManifest(
+export async function generateManifest(
   config: ManifestConfig,
   outDir: string,
-): string {
+): Promise<string> {
   const manifestContent = JSON.stringify(
     {
       name: config.name,
@@ -31,7 +31,7 @@ export function generateManifest(
   );
 
   const outputPath = path.join(outDir, config.output || "manifest.webmanifest");
-  fs.writeFileSync(outputPath, manifestContent);
+  await fs.promises.writeFile(outputPath, manifestContent);
 
   return outputPath;
 }

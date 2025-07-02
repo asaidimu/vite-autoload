@@ -1,84 +1,72 @@
-import type {
-  TransformConfig,
-  FileMatchConfig,
-  ComponentConfig,
-  ResolvedFile,
-} from "../types";
+import type { TransformConfig, ComponentConfig, ResolvedFile, FileMatchConfig } from "../types";
 import { Logger } from "../utils/logger";
 import { createCacheManager } from "../utils/cache";
 import { createFileResolver } from "../utils/resolver";
 import { createDataProcessor } from "../utils/transform";
 import { createCodeGenerator } from "../utils/codegen";
-import { createUriTransformer } from "../utils/uri";
 import { BuildContext } from "../types";
+import { createUriTransformer } from "../utils/uri";
 
 interface GeneratorApi {
   readonly name: string;
   readonly config: ReadonlyArray<TransformConfig<any, any, any>>;
-  readonly getModules: (context: {
-    production: boolean;
-  }) => ReadonlyArray<ResolvedFile>;
-  readonly getData: (context: BuildContext) => Record<string, Array<any>>;
-  readonly getCode: (context: BuildContext) => string | Record<string, string>;
+  readonly getGroups: (context: BuildContext) => ReadonlyArray<ResolvedFile>;
+  readonly getData: (
+    context: BuildContext,
+  ) => Promise<Record<string, Array<any>>>;
+  readonly getCode: (
+    context: BuildContext,
+  ) => Promise<string | Record<string, string>>;
   readonly hasFile: (file: string) => boolean;
   readonly addFile: (file: string) => void;
   readonly removeFile: (file: string) => void;
-  readonly findModule: (searchName: string) => boolean;
+  readonly findGroup: (searchName: string) => boolean;
 }
 
 export function createCollectionGenerator(
   options: ComponentConfig & { logger?: Logger },
 ): GeneratorApi {
   const { name, groups: config, logger } = options;
-  // Initialize pipeline components
   const cache = createCacheManager(logger);
   const fileResolver = createFileResolver({ config, cache, logger });
   const dataProcessor = createDataProcessor({ config });
   const codeGenerator = createCodeGenerator(options);
   const uriTransformer = createUriTransformer();
 
-  // Initialize the file resolver
   fileResolver.initialize();
 
-  function getModules(context: {
-    production: boolean;
-  }): ReadonlyArray<ResolvedFile> {
+  function getGroups(context: BuildContext): ReadonlyArray<ResolvedFile> {
     return fileResolver
       .getAllEntries()
       .map((entry) => {
-        return entry.files.map((file) => {
-          const groupConfig = config.find((c) => c.name === entry.name);
-          return {
-            ...file,
-            uri: uriTransformer.transform({
-              uri: file.uri,
-              prefix: (groupConfig?.input as FileMatchConfig)?.prefix,
-              production: context.production,
-            }),
-          };
+        const group = options.groups.find((i) => i.name === entry.name);
+        return entry.files.map((f) => {
+          const transformedUri = uriTransformer.transform({
+            uri: f.uri,
+            prefix: (group?.input as FileMatchConfig).prefix,
+            production: context.production,
+          });
+          return { ...f, uri: transformedUri };
         });
       })
       .flat();
   }
 
-  function getData(context: BuildContext): Record<string, Array<any>> {
+  async function getData(
+    context: BuildContext,
+  ): Promise<Record<string, Array<any>>> {
     const all = fileResolver.getAllEntries();
-    const entries = all
-      .filter((f) => context.name === undefined || f.name === context.name)
-      .map((f) => f.files)
-      .flat();
-    logger?.debug(
-      `[${name}] getData: Resolved entries count: ${entries.length}`,
-    );
-    const processedData = dataProcessor.processEntries(entries, context);
-    logger?.debug(
-      `[${name}] getData: Processed data keys: ${Object.keys(processedData).join(", ")}`,
+    const processedData = await dataProcessor.processEntries(
+      all.filter((f) => context.name === undefined || f.name === context.name),
+      context,
     );
     return processedData;
   }
 
-  function getCode(context: BuildContext): string | Record<string, string> {
-    const data = getData(context);
+  async function getCode(
+    context: BuildContext,
+  ): Promise<string | Record<string, string>> {
+    const data = await getData(context);
     return codeGenerator.generateCode(data, context);
   }
 
@@ -96,20 +84,20 @@ export function createCollectionGenerator(
     fileResolver.removeFile(file);
   }
 
-  function findModule(searchName: string): boolean {
+  function findGroup(searchName: string): boolean {
     return config.some((c) => c.name === searchName) || searchName === name;
   }
 
   return {
     name,
     config,
-    getModules,
+    getGroups,
     getData,
     getCode,
     hasFile,
     addFile,
     removeFile,
-    findModule,
+    findGroup,
   };
 }
 
@@ -120,14 +108,24 @@ export function createModuleGenerator(options: ComponentConfig) {
   return {
     name: generator.name,
     config: generator.config,
-    modules: generator.getModules,
+    modules: generator.getGroups,
     data: generator.getData,
     code: generator.getCode,
     match: generator.hasFile,
     add: generator.addFile,
     remove: generator.removeFile,
-    find: generator.findModule,
+    find: generator.findGroup,
   };
 }
 
-export type ModuleGenerator = ReturnType<typeof createModuleGenerator>;
+export type ModuleGenerator = {
+  name: string;
+  config: ReadonlyArray<TransformConfig<any, any, any>>;
+  modules: (context: BuildContext) => ReadonlyArray<ResolvedFile>;
+  data: (context: BuildContext) => Promise<Record<string, Array<any>>>;
+  code: (context: BuildContext) => Promise<string | Record<string, string>>;
+  match: (file: string) => boolean;
+  add: (file: string) => void;
+  remove: (file: string) => void;
+  find: (searchName: string) => boolean;
+};
