@@ -1,3 +1,13 @@
+# [5.0.0](https://github.com/asaidimu/vite-autoload/compare/v4.0.0...v5.0.0) (2025-07-02)
+
+
+* refactor(core)!: migrate to async operations for improved performance ([0eb84e6](https://github.com/asaidimu/vite-autoload/commit/0eb84e6d3b26b960aded28e1316798abbf2cb924))
+
+
+### BREAKING CHANGES
+
+* The 'extract' utility function, and the 'transform' and 'aggregate' functions within TransformConfig (used in autoload.config.ts), now return Promises. Any custom implementations of these functions that perform asynchronous operations must now return a Promise, and calls to 'extract' in 'transform' functions should be prefixed with 'await'. This change was made to prevent synchronous I/O blocking the event loop, thereby improving overall plugin performance and responsiveness. Ensure your autoload.config.ts or any custom generator implementations are updated to handle the new asynchronous signatures.
+
 # [4.0.0](https://github.com/asaidimu/vite-autoload/compare/v3.1.0...v4.0.0) (2025-07-01)
 
 
