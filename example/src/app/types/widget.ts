@@ -6,8 +6,11 @@ export interface WidgetData extends Record<string, unknown> {
   position: {
     row: number;
     column: number;
-    span?: number;
   };
+    span? :{
+        row?: number,
+        column?: number,
+    }
 }
 
 export interface Widget extends WidgetData {

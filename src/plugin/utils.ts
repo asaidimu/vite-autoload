@@ -1,35 +1,107 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import * as crypto from "crypto";
 import { generateTypes } from "../generators/types-generator";
 import { generateManifest } from "../generators/manifest-generator";
 import { generateSitemap } from "../generators/sitemap-generator";
 import { PluginContext } from "./types";
+import { ResolvedFile } from "../types/transform";
 
 /**
- * Calculates a JSON string hash for any data structure to detect changes.
+ * Calculates a hash for any data structure, including file content hashes for ResolvedFile objects.
  */
-export const getDataHash = (data: any): string => {
-  return JSON.stringify(data);
+export const getDataHash = async (data: any): Promise<string> => {
+  const hash = crypto.createHash("sha256");
+  hash.update(JSON.stringify(data));
+
+  // If the data contains ResolvedFile objects, hash their content
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      if (item && typeof item === "object") {
+        for (const key in item) {
+          if (isResolvedFile(item[key])) {
+            try {
+              const fileContent = await fs.readFile(item[key].path, "utf-8");
+              hash.update(fileContent);
+            } catch (error) {
+              console.warn(`Could not read file ${item[key].path}:`, error);
+            }
+          }
+        }
+      }
+    }
+  } else if (typeof data === "object" && data !== null) {
+    for (const key in data) {
+      if (isResolvedFile(data[key])) {
+        try {
+          const fileContent = await fs.readFile(data[key].path, "utf-8");
+          hash.update(fileContent);
+        } catch (error) {
+          console.warn(`Could not read file ${data[key].path}:`, error);
+        }
+      } else if (Array.isArray(data[key])) {
+        for (const item of data[key]) {
+          if (isResolvedFile(item)) {
+            try {
+              const fileContent = await fs.readFile(item.path, "utf-8");
+              hash.update(fileContent);
+            } catch (error) {
+              console.warn(`Could not read file ${item.path}:`, error);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return hash.digest("hex");
 };
+
+function isResolvedFile(obj: any): obj is ResolvedFile {
+  return (
+    typeof obj === "object" &&
+    obj !== null &&
+    "uri" in obj &&
+    "path" in obj &&
+    "file" in obj
+  );
+}
 
 /**
  * Checks if a virtual module's content has changed based on its data hash.
  */
 export const hasVirtualModuleChanged = async (
   ctx: PluginContext,
-  name: string,
+  moduleName: string,
 ): Promise<boolean> => {
-  const generator = ctx.generators.find((g) => g.name === name);
-  if (!generator) return false;
+  const found = ctx.nameIndex.lookup(moduleName);
 
-  const currentData = await generator.data({ production: false });
-  const currentHash = getDataHash(currentData);
-  const previousHash = ctx.virtualModuleCache.get(name);
+  if (!found) {
+    ctx.logger.warn(`Virtual module ${moduleName} not found in NameIndex.`);
+    return false;
+  }
+
+  // Find the generator for the component
+  const generator = ctx.generators.find((g) => g.name === found.component);
+  if (!generator) {
+    ctx.logger.error(`Generator for component ${found.component} not found.`);
+    return false;
+  }
+
+  // Pass the group name if it exists, otherwise undefined (for component-level modules)
+  const dataContext = {
+    production: false,
+    name: found.group || undefined,
+  };
+
+  const currentData = await generator.data(dataContext);
+  const currentHash = await getDataHash(currentData);
+  const previousHash = ctx.virtualModuleCache.get(moduleName);
 
   const hasChanged = previousHash !== currentHash;
   if (hasChanged) {
-    ctx.virtualModuleCache.set(name, currentHash);
-    ctx.logger.debug(`Virtual module ${name} has changed`);
+    ctx.virtualModuleCache.set(moduleName, currentHash);
+    ctx.logger.debug(`Virtual module ${moduleName} has changed`);
   }
   return hasChanged;
 };
@@ -58,7 +130,14 @@ export async function regenerateTypes(ctx: PluginContext) {
         const collectedTypes = Object.values(data)
           .flat()
           .map((item: any) => item && item[property])
-          .filter(Boolean);
+          .filter(Boolean)
+          .filter((item) => {
+            if (typeof item !== 'string') {
+              logger.warn(`Skipping non-string value for type generation: ${JSON.stringify(item)}`);
+              return false;
+            }
+            return true;
+          });
 
         if (collectedTypes.length > 0) {
           types[name] = collectedTypes;

@@ -414,8 +414,13 @@ type Props = {
   name: string;
 };
 
-export async function extract<T>({ filePath, schema, name }: Props) {
-  const extractor = createMetadataExtractor(schema, { exportName: name });
-  const value = await extractor.extract(filePath);
-  return value as T;
+export async function extract<T>({ filePath, schema, name }: Props): Promise<T | null> {
+  try {
+    const extractor = createMetadataExtractor(schema, { exportName: name });
+    const value = await extractor.extract(filePath);
+    return value as T | null;
+  } catch (error) {
+    console.error(`Unexpected error in extract function for ${filePath}:`, error);
+    return null;
+  }
 }
