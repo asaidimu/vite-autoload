@@ -1,3 +1,10 @@
+# [6.2.0](https://github.com/asaidimu/vite-autoload/compare/v6.1.0...v6.2.0) (2025-07-02)
+
+
+### Features
+
+* **dx:** improve debug logging and HMR stability ([75de924](https://github.com/asaidimu/vite-autoload/commit/75de92401b8f5cfa0aede6853e55344db37e8d7f))
+
 # [6.1.0](https://github.com/asaidimu/vite-autoload/compare/v6.0.0...v6.1.0) (2025-07-02)
 
 
