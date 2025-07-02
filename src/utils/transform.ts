@@ -14,7 +14,7 @@ export interface DataProcessorOptions {
 
 export interface DataProcessor {
   readonly processEntries: (
-    entries: ReadonlyArray<ResolvedFiles>,
+    entries: Record<string, Array<ResolvedFile | any>>,
     context: BuildContext,
   ) => Promise<Record<string, Array<any>>>;
 }
@@ -26,19 +26,41 @@ export function createDataProcessor(
   const uriTransformer = createUriTransformer();
   const configMap = new Map(config.map((c) => [c.name, c]));
 
-  function transformEntry(
-    entry: ResolvedFile,
+  function transformItem(
+    item: ResolvedFile | any,
     moduleConfig: TransformConfig<any, any, any>,
     context: BuildContext,
     allData: Record<string, Array<any>>,
   ): any {
-    const transformedUri = uriTransformer.transform({
-      uri: entry.uri,
-      prefix: (moduleConfig.input as FileMatchConfig).prefix,
-      production: context.production,
-    });
+    let processedItem = item;
 
-    const transformedEntry = { ...entry, uri: transformedUri };
+    // If it's a ResolvedFile, apply URI transformation
+    if (
+      typeof item === 'object' &&
+      item !== null &&
+      'uri' in item &&
+      'path' in item &&
+      'file' in item
+    ) {
+      const entry = item as ResolvedFile;
+      // Only apply prefix if the input was a FileMatchConfig
+      let prefix: string | undefined;
+      if (
+        typeof moduleConfig.input === 'object' &&
+        moduleConfig.input !== null &&
+        'directory' in moduleConfig.input &&
+        'match' in moduleConfig.input
+      ) {
+        prefix = (moduleConfig.input as FileMatchConfig).prefix;
+      }
+
+      const transformedUri = uriTransformer.transform({
+        uri: entry.uri,
+        prefix: prefix,
+        production: context.production,
+      });
+      processedItem = { ...entry, uri: transformedUri };
+    }
 
     if (moduleConfig.transform) {
       const transformContext: TransformContext = {
@@ -47,41 +69,34 @@ export function createDataProcessor(
       };
 
       return moduleConfig.transform(
-        transformedEntry as ResolvedFile,
+        processedItem,
         transformContext,
       );
     }
 
-    return transformedEntry; // Default return if no transform function
+    return processedItem; // Default return if no transform function
   }
 
   async function processEntries(
-    entries: ReadonlyArray<ResolvedFiles>,
+    entries: Record<string, Array<ResolvedFile | any>>,
     context: BuildContext,
   ): Promise<Record<string, Array<any>>> {
     const result: Record<string, Array<any>> = {};
-    const groupedEntries = entries.reduce(
-      (acc, cur) => {
-        acc[cur.name] = cur.files;
-        return acc;
-      },
-      {} as Record<string, Array<any>>,
-    );
 
     // First pass: transform all entries
-    for (const [moduleKey, moduleEntries] of Object.entries(groupedEntries)) {
+    for (const [moduleKey, moduleItems] of Object.entries(entries)) {
       const moduleConfig = configMap.get(moduleKey);
       if (!moduleConfig) {
         console.warn(`No TransformConfig found for moduleKey: ${moduleKey}`);
         continue;
       }
 
-      const transformedEntries = await Promise.all(
-        moduleEntries.map((entry) =>
-          transformEntry(entry, moduleConfig, context, result),
+      const transformedItems = await Promise.all(
+        moduleItems.map((item) =>
+          transformItem(item, moduleConfig, context, result),
         ),
       );
-      result[moduleKey] = transformedEntries;
+      result[moduleKey] = transformedItems;
     }
 
     // Second pass: apply aggregation functions

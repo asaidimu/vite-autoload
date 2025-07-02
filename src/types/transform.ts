@@ -61,14 +61,15 @@ export type ExtractFunction = (
   options: ExtractOptions,
 ) => Promise<Record<string, unknown>>;
 
+export type DataSource<Data> = (() => Promise<Data> | Data);
 /**
  * Defines a complete data transformation pipeline from input files to transformed and aggregated output.
- * @template InputData The type of data extracted from the input files (e.g., ResolvedFile).
+ * @template Data The type of data returned by a data source.
  * @template TransformedOutput The type of data after the transformation step.
  * @template AggregatedOutput The type of data after the aggregation step.
  */
 export interface TransformConfig<
-  InputData,
+  Data,
   TransformedOutput,
   AggregatedOutput,
 > {
@@ -79,7 +80,7 @@ export interface TransformConfig<
   /** Optional arbitrary metadata associated with this transformation pipeline. */
   metadata?: Record<string, unknown>;
   /** Configuration for matching input files, or data */
-  input: FileMatchConfig | (() => Promise<Array<InputData>> | Array<InputData>);
+  input: FileMatchConfig | DataSource<Data>
   /** Optional configuration for the output of the transformed/aggregated data. */
   output?: {
     /** The template string for generating the output file. */
@@ -97,7 +98,7 @@ export interface TransformConfig<
    * The context provides general transformation data, and additional metadata can be passed.
    */
   transform?: (
-    item: ResolvedFile | InputData,
+    item: ResolvedFile | Data,
     context: TransformContext,
     metadata?: Record<string, Record<string, unknown>>,
   ) => TransformedOutput | Promise<TransformedOutput>;

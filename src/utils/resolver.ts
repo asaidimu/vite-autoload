@@ -8,7 +8,6 @@ import type {
 import { CacheManager } from "./cache";
 import { Logger } from "./logger";
 import pico from "picomatch";
-import { createUriTransformer } from "./uri";
 
 export type ResolvedFiles = {
   name: string;
@@ -58,9 +57,7 @@ export interface FileResolver {
 export function createFileResolver(options: FileResolverOptions): FileResolver {
   const { config, cache, logger } = options;
 
-  // Internal cache structure: Map<groupName, Map<filePath, ResolvedFile>>
   const groupCache = new Map<string, Map<string, ResolvedFile>>();
-  const uriTransformer = createUriTransformer();
 
   function initializeGroupCache(): void {
     groupCache.clear();
@@ -69,26 +66,13 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
     }
   }
 
-  function resolveGroupFiles(
-    groupConfig: TransformConfig<any, any, any>,
-  ): ResolvedFile[] {
-    const { data: _, ...resolverConfig } = groupConfig.input as FileMatchConfig;
-    const resolved = resolve(resolverConfig);
-
-    return resolved.map((entry) => ({
-      // TODO: get rid of this legacy thing
-      module: groupConfig.name, // we are so getting rid of this.
-      ...entry,
-    }));
-  }
-
   function initialize(): void {
     try {
       cache.clear();
       initializeGroupCache();
 
       for (const groupConfig of config) {
-        const entries = resolveGroupFiles(groupConfig);
+        const entries = resolve(groupConfig.input as FileMatchConfig);
         const groupFiles = groupCache.get(groupConfig.name)!;
 
         for (const entry of entries) {

@@ -46,6 +46,16 @@ export default function createAutoloadConfig({
     },
   };
 
+  const dataTransformConfig: TransformConfig<Array<number>, any, any> = {
+    name: "data", // Corresponds to the old output.name
+    description: "Transforms UI view files into routable data.",
+    input: () => Promise.resolve(Array.from(new Array(20)).map((_, i) => i + 1)),
+    output: {},
+    transform: async (item) => {
+      return item as any;
+    },
+  };
+
   // Define the ComponentsConfig for 'routes'
   const routes: ComponentConfig = {
     name: "routes", // A logical name for this high-level component
@@ -60,7 +70,7 @@ export default function createAutoloadConfig({
         property: "route", // Property to use for type generation
       },
     },
-    groups: [viewsTransformConfig],
+    groups: [viewsTransformConfig, dataTransformConfig],
   };
 
   return {

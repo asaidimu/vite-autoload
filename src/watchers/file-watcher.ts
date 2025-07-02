@@ -19,9 +19,9 @@ export function createFileWatcher(
   // Only watch necessary directories
   const watchDirs = options.components
     .flatMap((component) =>
-      component.groups.map(
-        (group) => (group.input as FileMatchConfig).directory,
-      ),
+      component.groups
+        .filter((group) => typeof group.input !== "function")
+        .map((group) => (group.input as FileMatchConfig).directory),
     )
     .filter(Boolean); // Remove any undefined directories
 
@@ -72,7 +72,7 @@ export function createFileWatcher(
         usePolling: false,
         // Ignore common temporary files and the types file
         ignored: [
-          /(^|[\/\\])\../, // dotfiles
+          /(^|[\\/])\../, // dotfiles
           "**/*.tmp",
           "**/*.temp",
           "**/node_modules/**",
