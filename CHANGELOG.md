@@ -1,3 +1,13 @@
+# [6.0.0](https://github.com/asaidimu/vite-autoload/compare/v5.0.0...v6.0.0) (2025-07-02)
+
+
+* feat(core)!: introduce programmatic data sources ([8b60eca](https://github.com/asaidimu/vite-autoload/commit/8b60eca51a922a85d1af71762f019f43e7d9f06f))
+
+
+### BREAKING CHANGES
+
+* This version updates the required peer dependency to Vite v7.0.0. Users must upgrade their Vite installation to v7.0.0 or higher to use this version of the plugin.
+
 # [5.0.0](https://github.com/asaidimu/vite-autoload/compare/v4.0.0...v5.0.0) (2025-07-02)
 
 
