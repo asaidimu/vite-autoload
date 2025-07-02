@@ -1,8 +1,8 @@
 # @asaidimu/vite-autoload
 
-[![npm version](https://img.shields.io/npm/v/%40asaidimu%2Fvite-autoload?style=flat-square)](https://www.npmjs.com/package/@asaidimu/vite-autoload)
+[![npm version](https://img.shields.io/npm/v/%40asaidimu%2Fvite-autoload/?style=flat-square)](https://www.npmjs.com/package/@asaidimu/vite-autoload/v4.0.0)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://github.com/asaidimu/vite-autoload/blob/main/LICENSE.md)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/asaidimu/vite-autoload/ci.yml?branch=main&label=build&style=flat-square)](https://github.com/asaidimu/vite-autoload/actions/workflows/ci.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/asaidimu/vite-autoload/test.yaml?branch=main&label=build&style=flat-square)](https://github.com/asaidimu/vite-autoload/actions/workflows/test.yaml)
 
 `@asaidimu/vite-autoload` is an enhanced Vite plugin for automatic route and module loading, designed to streamline development workflows by dynamically generating and managing application components and data based on your file system.
 
@@ -39,8 +39,8 @@
 This plugin goes beyond simple file scanning by incorporating features such as automatic sitemap generation for SEO, comprehensive Progressive Web App (PWA) manifest creation, and a robust metadata extraction system. It simplifies the definition of complex application structures, allowing developers to focus on writing application logic rather than boilerplate.
 
 **⚠️ Beta Notice: Rapid & Breaking Changes**
-This project is currently in its early stages of development and should be considered beta software. The API and configuration options are subject to frequent and potentially breaking changes without prior notice as the project evolves.
-While it is feature-rich, it has not yet been battle-tested in a wide range of production environments. Please use with caution, and be sure to pin a specific version in your package.json to avoid unexpected disruptions from new releases.
+This project is currently in its early stages of development and should be considered beta software. The API and configuration options are subject to frequent and potentially breaking changes without prior notice as the project evolves (as seen in recent v3.0.0 and v4.0.0 breaking changes).
+While it is feature-rich, it has not yet been battle-tested in a wide range of production environments. Please use with caution, and be sure to pin a specific version in your `package.json` to avoid unexpected disruptions from new releases.
 
 We highly encourage feedback and contributions, but please be prepared for a rapidly changing codebase.
 
@@ -53,7 +53,7 @@ We highly encourage feedback and contributions, but please be prepared for a rap
 -   🌐 **PWA Manifest Generation**: Integrates with Vite's build pipeline to generate a `manifest.webmanifest` file, enabling your application to function as a Progressive Web App (PWA) with configurable icons, display modes, and more.
 -   📄 **Type Definition Generation**: Automatically generates TypeScript declaration files (`.d.ts`) for your generated modules. This ensures strong type safety and improves developer experience when consuming the virtual modules.
 -   🔑 **Metadata Extraction**: A powerful feature that allows extracting structured metadata directly from your source files (e.g., page titles, authentication requirements) using TypeScript AST analysis and validation against Zod schemas. This metadata can then be included in the generated virtual modules.
--   🛠️ **Highly Configurable**: Offers extensive options for defining file matching rules, transforming discovered file data, customizing output formats, and fine-tuning build-time and development-time behaviors.
+-   🛠️ **Highly Configurable**: Offers extensive options for defining file matching rules, transforming discovered file data, customizing output formats, and fine-tuning build-time and development-time behaviors. The plugin introduces a unified `components` model for defining module groups, replacing previous `routes` and `modules` root properties.
 
 ---
 
@@ -62,8 +62,9 @@ We highly encourage feedback and contributions, but please be prepared for a rap
 ### Prerequisites
 
 -   **Node.js**: LTS version (e.g., 18.x or 20.x)
--   **Vite**: Version 6.0.0 or higher
+-   **Vite**: Version 6.0.0 or higher (as per `package.json`)
 -   **Package Manager**: Bun (recommended as per `package.json` scripts), npm, Yarn, or pnpm
+-   **TypeScript**: v5.8.3 or higher (as per `package.json`)
 
 ### Installation Steps
 
@@ -87,10 +88,10 @@ For the full capabilities, especially metadata extraction using Zod schemas, you
 
 ```bash
 # Using bun
-bun add @babel/parser @babel/traverse playwright zod --development
+bun add @babel/parser @babel/traverse zod --development
 
 # Using npm
-npm install --save-dev @babel/parser @babel/traverse playwright zod
+npm install --save-dev @babel/parser @babel/traverse zod
 ```
 
 ### Configuration
@@ -128,6 +129,7 @@ export default function createAutoloadConfig({
       rootDir: process.cwd(), // Base directory for resolving relative paths
       export: {
         types: "src/app/config/autogen.d.ts", // Path for generated TypeScript declaration file
+        routeLimit: 1000, // Optional: Limits routes included in ApplicationRoute type
       },
       sitemap: {
         output: "sitemap.xml", // Output filename for the sitemap
@@ -160,8 +162,9 @@ export default function createAutoloadConfig({
     // Define different component categories and their groups
     components: [
       {
-        name: "routes", // Logical name for this component category (e.g., 'routes', 'blogPosts')
-        description: "Defines the routing structure and data for application views and pages.",
+        name: "routes", // Logical name for this high-level component (e.g., 'routes', 'blogPosts')
+        description:
+          "Defines the routing structure and data for application views and pages.",
         strategy: {
           sitemap: {
             property: "route", // Property from transformed data to use for sitemap entries
@@ -179,7 +182,7 @@ export default function createAutoloadConfig({
             input: {
               directory: "ui", // Base directory to scan
               match: ["**/*.ts", "**/*.tsx"], // Glob patterns to match files
-              ignore: ["**/__tests__/**"], // Optional: ignore patterns
+              ignore: ["**/__tests__/**", "*.d.ts"], // Optional: ignore patterns
               prefix: "/_views/", // Optional: prefix for URIs in the generated output
             },
             output: {
@@ -187,7 +190,7 @@ export default function createAutoloadConfig({
               template: "export const views = {{ data }};",
               types: { name: "ViewKeys", property: "route" }, // Generate type like `type ViewKeys = '/home' | '/about';`
             },
-            transform: (item: ResolvedFile) => {
+            transform: async (item: ResolvedFile) => {
               // Custom transformation logic for each discovered file
               const route = item.path
                 .replace(/^ui/, "") // Adjust based on your `directory`
@@ -199,7 +202,7 @@ export default function createAutoloadConfig({
                 route: route || "/", // Ensure '/' for root
                 path: item.uri, // The full URI for the module
                 // Example metadata extraction using the passed `extract` function
-                metadata: extract({
+                metadata: await extract({
                   filePath: item.file,
                   schema: z.object({
                     title: z.string(),
@@ -223,7 +226,7 @@ export default function createAutoloadConfig({
             output: {
               template: "export const pages = {{ data }};",
             },
-            transform: (page: ResolvedFile) => {
+            transform: async (page: ResolvedFile) => {
               const route = page.path
                 .replace(/^src\/interface\/pages/, "")
                 .replace(/\\/g, "/")
@@ -232,7 +235,7 @@ export default function createAutoloadConfig({
               return {
                 route: route || "/",
                 path: page.uri,
-                metadata: extract({
+                metadata: await extract({
                   filePath: page.file,
                   schema: z.object({
                     title: z.string(),
@@ -265,7 +268,8 @@ export default function createAutoloadConfig({
             },
             output: {
               // Custom template for the components module, including a default export
-              template: "export const components = {{ data }};\nexport default components;",
+              template:
+                "export const components = {{ data }};\nexport default components;",
               types: { name: "ComponentKeys", property: "name" }, // Generates `export type ComponentKeys = 'Button' | 'Input';`
             },
             transform: (item: ResolvedFile) => ({
@@ -274,7 +278,10 @@ export default function createAutoloadConfig({
             }),
             aggregate: (items) =>
               // Aggregate components into an object keyed by their name for easy lookup
-              items.reduce((acc, item) => ({ ...acc, [item.name!]: item.path }), {}),
+              items.reduce(
+                (acc, item: any) => ({ ...acc, [item.name!]: item.path }),
+                {},
+              ),
           },
           // A group for custom hooks
           {
@@ -327,7 +334,7 @@ export default defineConfig({
 
 ### Configuration Options
 
-The `PluginOptions` object, which defines the comprehensive configuration for the plugin, is structured as follows:
+The `PluginOptions` object, which defines the comprehensive configuration for the plugin, is structured around `settings` (global options) and `components` (defining content categories and their transformation groups).
 
 ```typescript
 interface PluginOptions {
@@ -335,7 +342,7 @@ interface PluginOptions {
     rootDir?: string;
     export?: {
       types?: string;
-      routeLimit?: number; // Optional: Limits routes included in ApplicationRoute type
+      routeLimit?: number;
     };
     sitemap?: SitemapConfig;
     manifest?: ManifestConfig;
@@ -344,7 +351,7 @@ interface PluginOptions {
     chunkSize?: number;
     watch?: WatchOptions;
   };
-  components: Array<ComponentConfig>; // Main array for defining content categories
+  components: Array<ComponentConfig>;
 }
 
 type ComponentConfig = {
@@ -357,6 +364,22 @@ type ComponentConfig = {
   };
   groups: Array<TransformConfig<any, any, any>>; // Array of transformation groups within this category
 };
+
+// Simplified TransformConfig for brevity
+interface TransformConfig<InputData, TransformedOutput, AggregatedOutput> {
+  name: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  input: FileMatchConfig | (() => Promise<Array<InputData>> | Array<InputData>);
+  output?: {
+    template?: string;
+    types?: { name: string; property: string };
+  };
+  transform?: (item: ResolvedFile | InputData, context: TransformContext) => TransformedOutput | Promise<TransformedOutput>;
+  aggregate?: (items: Array<TransformedOutput | Promise<TransformedOutput>>) => AggregatedOutput | Promise<AggregatedOutput>;
+}
+
+// Full types are available in src/types/
 ```
 
 Let's break down the key options:
@@ -379,7 +402,7 @@ A top-level object containing global configurations for the plugin.
     -   `baseUrl`: `string` - The base URL of your website (e.g., `'https://example.com'`). Used to construct absolute URLs in the sitemap.
     -   `exclude`: `ReadonlyArray<string>` (Optional) - An array of glob patterns or regex strings to exclude specific routes from the sitemap (e.g., `['/admin/*', '/private/*']`).
 -   `manifest`: `ManifestConfig` (Optional)
-    Configuration for PWA Web App Manifest (`manifest.webmanifest`) generation. This object directly maps to standard Web App Manifest properties.
+    Configuration for PWA Web App Manifest (`manifest.webmanifest`) generation. This object directly maps to standard Web App Manifest properties. See `src/types/manifest.ts` for full details.
     -   `name`: `string` - Full name of the application.
     -   `shortName`: `string` (Optional) - Short name, used when space is limited.
     -   `description`: `string` (Optional) - Description of the application.
@@ -390,16 +413,9 @@ A top-level object containing global configurations for the plugin.
     -   `scope`: `string` (Optional, Default: `'/'`) - Navigation scope.
     -   `start_url`: `string` (Optional, Default: `'/'`) - URL that loads when the user launches the app.
     -   `icons`: `Array<{ src: string; sizes: string; type?: string; purpose?: "any" | "maskable" | "monochrome"; }>` (Optional) - Array of icon objects.
-    -   `screenshots`: `Array<{ src: string; sizes: string; type?: string; platform?: string; }>` (Optional) - Array of screenshot objects.
-    -   `related_applications`: `Array<{ platform: string; url: string; id?: string; }>` (Optional) - Related native applications.
-    -   `prefer_related_applications`: `boolean` (Optional) - Hint for user agent.
-    -   `categories`: `Array<string>` (Optional) - Categories the app belongs to.
-    -   `dir`: `"auto" | "ltr" | "rtl"` (Optional) - Text direction.
-    -   `lang`: `string` (Optional) - Primary language.
-    -   `iarc_rating_id`: `string` (Optional) - IARC rating ID.
     -   `output`: `string` (Optional, Default: `'manifest.webmanifest'`) - Output filename for the manifest.
--   `extract`: `(options: { filePath: string; schema: z.ZodType; name: string }) => Record<string, unknown> | null` (Required)
-    A function that provides the logic for extracting metadata from source files. The `extract` utility from `@asaidimu/vite-autoload/utils/metadata` is specifically designed for this purpose, leveraging TypeScript's AST for static analysis and Zod for validation.
+-   `extract`: `(options: { filePath: string; schema: z.ZodType; name: string }) => Promise<Record<string, unknown> | null>` (Required)
+    A function that provides the logic for extracting metadata from source files. The `extract` utility exported from `@asaidimu/vite-autoload` (re-exporting from `src/utils/metadata.ts`) is specifically designed for this purpose, leveraging TypeScript's AST for static analysis and Zod for validation.
     -   `filePath`: The absolute path to the file to extract metadata from.
     -   `schema`: A Zod schema to validate the extracted metadata against.
     -   `name`: The name of the exported constant (e.g., `export const metadata = {...}` or `export default {...}`) to extract. Use `'default'` for default exports.
@@ -457,12 +473,12 @@ This is the core of the plugin's configuration. It is an `Array<ComponentConfig>
         -   `types`: `object` (Optional) - Configuration for generating TypeScript types specific to this group.
             -   `name`: `string` - The name of the TypeScript type to generate (e.g., `'DashboardViewData'`).
             -   `property`: `string` - The property name from the transformed `item` (from the `transform` function's return value) to use for constructing the union type.
-    -   `transform`: `(item: ResolvedFile | InputData, context: TransformContext, metadata?: Record<string, Record<string, unknown>>) => TransformedOutput` (Optional)
+    -   `transform`: `(item: ResolvedFile | InputData, context: TransformContext) => TransformedOutput | Promise<TransformedOutput>` (Optional)
         A powerful function to transform each individual `ResolvedFile` or `InputData` object into a desired custom data structure. This is where you can extract metadata, construct routes, etc.
         -   `item`: The `ResolvedFile` object or `InputData` object.
         -   `context`: Provides `data` (from previous transformations), `environment` (e.g., `'build'`, `'dev'`).
-    -   `aggregate`: `(items: TransformedOutput[], metadata?: Record<string, Record<string, unknown>>) => AggregatedOutput` (Optional)
-        A function to perform aggregation on all transformed items for a given group, combining them into a single data structure (e.g., converting an array of objects into a map keyed by a specific property).
+    -   `aggregate`: `(items: Array<TransformedOutput | Promise<TransformedOutput>>) => AggregatedOutput | Promise<AggregatedOutput>` (Optional)
+        A function to perform aggregation on all transformed items for a given group, combining them into a single data structure (e.g., converting an array of objects into a map keyed by a specific property). This was introduced in `v1.1.0`.
 
 ### Consuming Generated Modules
 
@@ -524,20 +540,20 @@ Example output (default array):
 
 ### Core Components
 
--   **`createAutoloadPlugin`**:
-    The central orchestrator of the plugin. It initializes collection generators, sets up the file watcher, registers Vite hooks (`configResolved`, `configureServer`, `resolveId`, `load`, `transform`, `handleHotUpdate`, `buildStart`, `closeBundle`), and coordinates the generation of sitemaps and PWA manifests. It manages the virtual module lifecycle and HMR.
--   **`createCollectionGenerator`**:
-    Responsible for discovering files based on `FileMatchConfig`, applying `transform` functions to each file's data, optionally applying `aggregate` functions, and ultimately generating the JavaScript code string for the virtual modules (e.g., `virtual:views`, `virtual:components`). It maintains an internal cache of resolved files.
--   **`createFileWatcher`**:
-    Utilizes the `chokidar` library to efficiently monitor specified directories for file additions, changes, and deletions. When changes are detected, it debounces and triggers an update callback within the plugin, leading to regeneration of module data and HMR.
--   **`createMetadataExtractor`**:
-    A sophisticated utility that performs static code analysis on TypeScript files using the `typescript` AST parser. It can extract the values of specific `export const` or `export default` object literals, handling various literal types, array literals, object literals, and even transforming imported modules into dynamic import functions. Extracted data is validated against provided Zod schemas.
+-   **`createAutoloadPlugin`**: The central orchestrator of the plugin. It initializes collection generators, sets up the file watcher, registers Vite hooks, and coordinates the generation of sitemaps and PWA manifests. It manages the virtual module lifecycle and Hot Module Replacement (HMR).
+-   **`createCollectionGenerator`**: Responsible for discovering files based on `FileMatchConfig`, applying `transform` functions to each file's data, optionally applying `aggregate` functions, and ultimately generating the JavaScript code string for the virtual modules (e.g., `virtual:views`, `virtual:components`). It maintains an internal cache of resolved files.
+-   **`createFileResolver`**: Manages the initial discovery and ongoing tracking of files that match configured glob patterns within specified directories. It efficiently resolves paths and maintains an internal cache of `ResolvedFile` objects.
+-   **`createDataProcessor`**: Handles the transformation and aggregation pipeline for the data associated with discovered files. It applies the `transform` function to individual file entries and the `aggregate` function to the collection of transformed data, preparing it for code generation.
+-   **`createCodeGenerator`**: Generates the final JavaScript code string that constitutes the virtual module, based on the processed data and an optional output template.
+-   **`createFileWatcher`**: Utilizes the `chokidar` library to efficiently monitor specified directories for file additions, changes, and deletions. When changes are detected, it debounces and triggers an update callback within the plugin, leading to regeneration of module data and HMR.
+-   **`createMetadataExtractor`**: A sophisticated utility that performs static code analysis on TypeScript files using the `typescript` AST parser. It can extract the values of specific `export const` or `export default` object literals, handling various literal types, array literals, object literals, and even transforming imported modules into dynamic import functions. Extracted data is validated against provided Zod schemas.
+-   **`NameIndex`**: A utility for ensuring uniqueness of component and group names within the plugin's configuration, preventing naming conflicts.
 
 ### Data Flow
 
 1.  **Initialization**:
     -   During Vite's `configResolved` hook, the plugin stores the Vite configuration.
-    -   On `configureServer` (development) or `buildStart` (production), `createAutoloadPlugin` initializes `createCollectionGenerator` instances for all configured `components` and their `groups`. Each generator uses an internal file resolver to perform an initial scan and build its cache of matched files.
+    -   On `configureServer` (development) or `buildStart` (production), `createAutoloadPlugin` initializes `createCollectionGenerator` instances for all configured `components` and their `groups`. Each generator uses an internal `FileResolver` to perform an initial scan and build its cache of matched files.
     -   Internal caches (`fileToExportMap`, `virtualModuleCache`, `importerToVirtualDeps`, `virtualModuleDeps`) are populated based on the initial file scan.
 2.  **File Watching & HMR (Development)**:
     -   `createFileWatcher` starts monitoring the directories specified in your `PluginOptions.components[].groups[].input`.
@@ -597,10 +613,10 @@ The `package.json` defines several useful scripts for development and building:
 
 Currently, explicit unit or integration test files (`.test.ts`, `.spec.ts`) are not present in the provided codebase snapshot. For thorough testing of a plugin like this, you would typically include:
 
--   **Unit Tests**: For utilities (`debounce`, `hash`, `checkers`, `logger`) and smaller components (`metadata` extractor logic, `sitemap` generation).
+-   **Unit Tests**: For utilities (e.g., `debounce`, `hash`, `checkers`, `logger`, `uri`) and smaller components (e.g., `metadata` extractor logic, `sitemap` generation).
 -   **Integration Tests**: To verify the plugin's behavior within a Vite environment, ensuring virtual modules load correctly, HMR works, and assets are generated as expected during build.
 
-If tests were available, you would typically run them with:
+If tests were available, you would typically run them with a command like:
 
 ```bash
 # Placeholder for running tests (if tests were present)
@@ -625,7 +641,7 @@ Contributions are highly welcome! If you're interested in contributing to `@asai
     ```
 4.  **Make Your Changes**: Implement your changes, ensuring they align with the existing code style and architecture.
 5.  **Write Tests (if applicable)**: If you're adding new features or fixing bugs, please consider adding relevant tests to ensure correctness and prevent regressions.
-6.  **Commit Messages**: Write clear, concise, and descriptive commit messages. Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) guidelines (e.g., `feat: Add new configuration option`, `fix: Resolve HMR issue`).
+6.  **Commit Messages**: Write clear, concise, and descriptive commit messages. Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) guidelines (e.g., `feat: Add new configuration option`, `fix: Resolve HMR issue`). The `package.json` `release` configuration uses `@semantic-release/commit-analyzer`, indicating strict adherence to these.
 7.  **Push to Your Fork**: Push your changes to your fork on GitHub.
     ```bash
     git push origin feature/your-feature-name
@@ -694,14 +710,15 @@ This plugin is designed with performance and developer experience in mind. Here 
 3.  **HMR Not Triggering Correctly**:
     -   **Virtual Module Imports**: Ensure that your application's entry points or other modules actually `import` the virtual modules (e.g., `import { views } from 'virtual:views';`). The plugin's HMR mechanism relies on Vite's module graph to track importers.
     -   **`logLevel` Debugging**: Set `logLevel: 'debug'` in your `PluginOptions.settings` to get detailed console output about file changes, module invalidations, and HMR events. This can help you diagnose why HMR might not be triggering as expected.
+    -   **Consistent Hashing**: The `getDataHash` function in `src/plugin/utils.ts` uses `JSON.stringify`. While generally sufficient, for complex data structures, inconsistent key order in stringification might lead to false positives for changes. If you experience unexpected HMR, consider a stable stringify library for `getDataHash` if your data structures are highly dynamic.
 4.  **Metadata Extraction Errors**:
     -   **Schema Mismatch**: If your `extract` function is failing or returning unexpected results, carefully review the `schema` (Zod type) you are providing. It must accurately match the structure of the metadata object you are attempting to extract from your source files.
     -   **Syntax Errors**: Ensure the source files from which you are extracting metadata have valid TypeScript/JavaScript syntax. Parsing errors in the source file can prevent metadata extraction.
-    -   **Static Analysis Limitations**: The `extract` utility performs static analysis of your code. It can successfully extract values from literal expressions (strings, numbers, booleans, arrays, objects) and identifiers that resolve to such literals or imported modules. It cannot evaluate complex runtime logic or dynamic computations within the metadata object.
+    -   **Static Analysis Limitations**: The `extract` utility performs static analysis of your code. It can successfully extract values from literal expressions (strings, numbers, booleans, arrays, objects) and identifiers that resolve to such literals or imported modules. It *cannot* evaluate complex runtime logic, function calls, or dynamic computations within the metadata object.
 
 ### Changelog
 
-For a detailed history of changes, new features, and bug fixes, please refer to the [CHANGELOG.md](https://github.com/asaidimu/vite-autoload/blob/main/CHANGELOG.md) file.
+For a detailed history of changes, new features, and bug fixes, please refer to the [CHANGELOG.md](https://github.com/asaidimu/vite-autoload/blob/main/CHANGELOG.md) file. Note the significant breaking changes introduced in versions `3.0.0` and `4.0.0` related to plugin configuration structure.
 
 ### License
 
@@ -709,4 +726,4 @@ This project is licensed under the [MIT License](https://github.com/asaidimu/vit
 
 ### Acknowledgments
 
-This project is developed and maintained by Saidimu. It leverages several excellent open-source libraries and tools, including [Vite](https://vitejs.dev/), [Chokidar](https://github.com/paulmillr/chokidar), [Zod](https://zod.dev/), [es-module-lexer](https://github.com/privatenumber/es-module-lexer), [Babel](https://babeljs.io/), and [Playwright](https://playwright.dev/), for which we are immensely grateful.
+This project is developed and maintained by Saidimu. It leverages several excellent open-source libraries and tools, including [Vite](https://vitejs.dev/), [Chokidar](https://github.com/paulmillr/chokidar), [Zod](https://zod.dev/), [es-module-lexer](https://github.com/privatenumber/es-module-lexer), [Babel](https://babeljs.io/), and [Playwright](https://playwright.dev/) (for dev environment), for which we are immensely grateful.
