@@ -339,7 +339,7 @@ function getHmrCodeInjector(
     const hmrCode = `
 // vite-plugin-autoload: HMR handling
 if (import.meta.hot) {
-  import.meta.hot.accept(() => {});
+  import.meta.hot.accept();
 }`;
     return { code: hmrCode, map: null };
   };
