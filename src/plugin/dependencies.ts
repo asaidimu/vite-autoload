@@ -21,6 +21,7 @@ export function updateDependencyMappings(
   logger.debug("Starting to update dependency mappings...");
   fileToExportMap.clear();
   virtualModuleDeps.clear();
+  importerToVirtualDeps.clear();
 
   const chunkSize = options.settings.chunkSize || 100;
 

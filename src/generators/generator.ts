@@ -63,6 +63,11 @@ interface GeneratorApi {
    * @returns True if the group is found, false otherwise.
    */
   readonly findGroup: (searchName: string) => boolean;
+  /**
+   * Touches a file, incrementing the version of any group it belongs to.
+   * @param file - The absolute path of the file to touch.
+   */
+  readonly touchFile: (file: string) => void;
 }
 
 /**
@@ -262,6 +267,12 @@ export function createCollectionGenerator(
     logger.debug(`File ${file} removed from ${name}.`);
   }
 
+  function touchFile(file: string): void {
+    logger.debug(`Touching file in ${name}: ${file}`);
+    fileResolver.touchFile(file);
+    logger.debug(`File ${file} touched in ${name}.`);
+  }
+
   function findGroup(searchName: string): boolean {
     logger.debug(`Searching for group ${searchName} in ${name}.`);
     const result =
@@ -281,6 +292,7 @@ export function createCollectionGenerator(
     hasFile,
     addFile,
     removeFile,
+    touchFile,
     findGroup,
   };
 }
@@ -301,6 +313,7 @@ export function createModuleGenerator(
     match: generator.hasFile,
     add: generator.addFile,
     remove: generator.removeFile,
+    touch: generator.touchFile,
     find: generator.findGroup,
   };
 }
@@ -314,5 +327,6 @@ export type ModuleGenerator = {
   match: (file: string) => boolean;
   add: (file: string) => void;
   remove: (file: string) => void;
+  touch: (file: string) => void;
   find: (searchName: string) => boolean;
 };

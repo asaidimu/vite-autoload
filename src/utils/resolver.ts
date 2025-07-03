@@ -103,6 +103,11 @@ export interface FileResolver {
    * @returns A Map where keys are group names and values are their versions.
    */
   readonly getVersions: () => Map<string, number>;
+  /**
+   * Touches a file, incrementing the version of any group it belongs to.
+   * @param file - The absolute path of the file to touch.
+   */
+  readonly touchFile: (file: string) => void;
 }
 
 /**
@@ -195,6 +200,18 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
     }
   }
 
+  function touchFile(file: string): void {
+    logger?.debug(`Touching file: ${file}`);
+
+    for (const groupConfig of config) {
+      const groupFiles = groupCache.get(groupConfig.name)!;
+      if (groupFiles.has(file)) {
+        logger?.debug(`File ${file} found in group ${groupConfig.name}. Incrementing version.`);
+        _versions.set(groupConfig.name, _versions.get(groupConfig.name)! + 1);
+      }
+    }
+  }
+
   function hasFile(file: string): boolean {
     return cache.has(file);
   }
@@ -218,6 +235,7 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
     initialize,
     addFile,
     removeFile,
+    touchFile,
     hasFile,
     getAllEntries,
     getVersions: () => _versions,

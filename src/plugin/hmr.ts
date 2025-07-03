@@ -26,6 +26,13 @@ export function createHmrFileWatcherCallback(
 ) {
   return async (changedFiles: string[]) => {
     config.logger.debug(`Files changed: ${changedFiles.join(", ")}`);
+    for (const changedFile of changedFiles) {
+      for (const generator of generators) {
+        if (generator.match(changedFile)) {
+          generator.touch(changedFile);
+        }
+      }
+    }
     await handleVirtualModuleStructureChange(config, runtime, generators);
   };
 }
