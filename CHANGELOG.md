@@ -1,3 +1,10 @@
+## [6.2.2](https://github.com/asaidimu/vite-autoload/compare/v6.2.1...v6.2.2) (2025-07-03)
+
+
+### Bug Fixes
+
+* Invalidate importing modules on virtual module change ([3ce7c58](https://github.com/asaidimu/vite-autoload/commit/3ce7c5870db53ad14d848db03755bca9cfc5cac1))
+
 ## [6.2.1](https://github.com/asaidimu/vite-autoload/compare/v6.2.0...v6.2.1) (2025-07-03)
 
 
