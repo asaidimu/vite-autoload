@@ -1,3 +1,11 @@
+## [6.2.3](https://github.com/asaidimu/vite-autoload/compare/v6.2.2...v6.2.3) (2025-07-03)
+
+
+### Bug Fixes
+
+* **hmr:** include importer-to-virtual-deps for full map updates ([dcb544e](https://github.com/asaidimu/vite-autoload/commit/dcb544eb5c9179fe425ebc20a800811b1817bd27))
+* Improve HMR for virtual modules by invalidating data cache on file changes ([493ab33](https://github.com/asaidimu/vite-autoload/commit/493ab3391c304dda88d311db9dc92d67c7c25997))
+
 ## [6.2.2](https://github.com/asaidimu/vite-autoload/compare/v6.2.1...v6.2.2) (2025-07-03)
 
 
