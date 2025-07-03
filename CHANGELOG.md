@@ -1,3 +1,10 @@
+## [6.2.1](https://github.com/asaidimu/vite-autoload/compare/v6.2.0...v6.2.1) (2025-07-03)
+
+
+### Bug Fixes
+
+* **workflow:** run tests in build workflow and general optimizations ([a18f83e](https://github.com/asaidimu/vite-autoload/commit/a18f83ea6abe340c218d910f895b35f3ed28f43e))
+
 # [6.2.0](https://github.com/asaidimu/vite-autoload/compare/v6.1.0...v6.2.0) (2025-07-02)
 
 
