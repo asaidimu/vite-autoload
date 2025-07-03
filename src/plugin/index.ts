@@ -1,96 +1,180 @@
 import type { Plugin } from "vite";
 import { createModuleGenerator } from "../generators/generator";
+import { PluginOptions } from "../types/plugin";
+import { createLogger } from "../utils/logger";
+import { NameIndex } from "../utils/name-index";
 import { createFileWatcher } from "../watchers/file-watcher";
 import { runBuildStart, runCloseBundle, transformHtml } from "./build";
-import { resolveVirtualId, loadVirtualModule } from "./virtual-modules";
 import {
   createHmrFileWatcherCallback,
   handleHotUpdate,
   initializeDevServer,
   transformImporterModule,
 } from "./hmr";
-import { PluginOptions } from "../types";
-import { createLogger } from "../utils/logger"; // Import our custom createLogger
-import { PluginContext } from "./types";
-import { NameIndex } from "../utils/name-index"; // Import NameIndex
+import { PluginConfig, PluginRuntime } from "./types";
+import { loadVirtualModule, resolveVirtualId } from "./virtual-modules";
+import { createViteAdapter } from "./vite-adapter";
 
+/**
+ * Creates the Vite Autoload plugin.
+ *
+ * @param options - The plugin options.
+ * @returns A Vite Plugin instance.
+ */
 export function createAutoloadPlugin(options: PluginOptions): Plugin {
-  // Initialize NameIndex
-  const nameIndex = new NameIndex(options.components);
-
-  // Shared state is encapsulated in the context object
-  const ctx: PluginContext = {
-    options,
-    // logger will be set in configResolved
-    logger: undefined!,
-    config: undefined!,
-    server: undefined,
-    generators: options.components.map((component) => {
-      return createModuleGenerator(component);
-    }),
-    fileToExportMap: new Map(),
-    virtualModuleCache: new Map(),
-    importerToVirtualDeps: new Map(),
-    virtualModuleDeps: new Map(),
-    nameIndex, // Add NameIndex to context
-  };
-
+  let pluginConfig: PluginConfig;
+  let pluginRuntime: PluginRuntime;
   let fileWatcher: ReturnType<typeof createFileWatcher>;
+  let generators: ReturnType<typeof createModuleGenerator>[];
 
   return {
     name: "vite-plugin-autoload",
 
-    // HOOK: Set up config and server context
+    /**
+     * Called when the Vite config is resolved.
+     * @param resolvedConfig The resolved Vite config.
+     */
     configResolved(resolvedConfig) {
-      ctx.config = resolvedConfig;
-      // Create our custom logger, passing Vite's logger and our desired logLevel
-      ctx.logger = createLogger(resolvedConfig.logger, options.settings.logLevel);
-      fileWatcher = createFileWatcher(
+      const logger = createLogger(
+        resolvedConfig.logger,
+        options.settings.logLevel,
+      );
+      const nameIndex = new NameIndex(options.components);
+
+      /**
+       * Immutable configuration for the plugin.
+       * @type {PluginConfig}
+       */
+      pluginConfig = {
         options,
-        ctx.logger,
-        createHmrFileWatcherCallback(ctx),
+        logger,
+        resolvedConfig,
+        nameIndex,
+      };
+
+      /**
+       * Mutable runtime state for the plugin.
+       * @type {PluginRuntime}
+       */
+      pluginRuntime = {
+        fileToExportMap: new Map(),
+        virtualModuleCache: new Map(),
+        importerToVirtualDeps: new Map(),
+        virtualModuleDeps: new Map(),
+      };
+
+      /**
+       * Array of module generators.
+       * @type {ReturnType<typeof createModuleGenerator>[]}
+       */
+      generators = options.components.map((component) => {
+        return createModuleGenerator(component, pluginConfig.logger);
+      });
+
+      /**
+       * File watcher instance.
+       * @type {ReturnType<typeof createFileWatcher>}
+       */
+      fileWatcher = createFileWatcher(
+        pluginConfig.options,
+        pluginConfig.logger,
+        createHmrFileWatcherCallback(pluginConfig, pluginRuntime, generators),
       );
     },
+    /**
+     * Configures the Vite dev server.
+     * @param server The Vite dev server instance.
+     */
     async configureServer(server) {
-      ctx.server = server;
-      await initializeDevServer(ctx, fileWatcher);
+      pluginRuntime.server = server;
+      await initializeDevServer(
+        pluginConfig,
+        pluginRuntime,
+        generators,
+        fileWatcher,
+      );
     },
 
-    // HOOK: Handle virtual module resolution and loading
+    /**
+     * Resolves the given ID to a virtual module ID if applicable.
+     * @param id The ID to resolve.
+     * @returns The resolved ID or null.
+     */
     resolveId(id) {
-      return resolveVirtualId(id, ctx);
+      return resolveVirtualId(id, pluginConfig.nameIndex);
     },
 
+    /**
+     * Loads the virtual module for the given ID.
+     * @param id The ID of the module to load.
+     * @returns The module content.
+     */
     async load(id) {
-      return await loadVirtualModule(id, ctx);
+      return await loadVirtualModule(
+        id,
+        pluginConfig.nameIndex,
+        pluginConfig.resolvedConfig.isProduction,
+        generators,
+      );
     },
 
-    // HOOK: Handle build-specific tasks
+    /**
+     * Called when the build starts.
+     */
     async buildStart() {
-      await runBuildStart.call(this, ctx);
+      const adapter = createViteAdapter(this);
+      await runBuildStart(adapter, pluginConfig, generators);
     },
 
+    /**
+     * Called when the build ends.
+     */
     buildEnd: () => {
       fileWatcher.stop();
     },
 
+    /**
+     * Called when the bundle is closed.
+     */
     async closeBundle() {
-      await runCloseBundle.call(this, ctx);
+      const adapter = createViteAdapter(this);
+      await runCloseBundle(adapter, pluginConfig, pluginRuntime, generators);
     },
 
-    // HOOK: Handle transformations
+    /**
+     * Transforms the HTML.
+     * @param html The HTML content.
+     * @returns The transformed HTML.
+     */
     transformIndexHtml(html) {
-      return transformHtml(html, ctx) as any;
+      return transformHtml(html, pluginConfig) as any;
     },
 
+    /**
+     * Transforms the given code.
+     * @param code The code to transform.
+     * @param id The ID of the module.
+     * @returns The transformed code.
+     */
     async transform(code, id) {
-      return await transformImporterModule.call(this, code, id, ctx);
+      const adapter = createViteAdapter(this);
+      return await transformImporterModule(
+        adapter,
+        code,
+        id,
+        pluginConfig,
+        pluginRuntime,
+        generators,
+      );
     },
 
-    // HOOK: Handle Hot Module Reloading
-    handleHotUpdate({ file, server }) {
-      ctx.server = server; // Ensure context is up-to-date
-      return handleHotUpdate(ctx, file);
+    /**
+     * Handles hot module updates.
+     * @param file The file that was updated.
+     * @returns Modules to be hot reloaded.
+     */
+    handleHotUpdate({ file }) {
+      return handleHotUpdate(pluginConfig, pluginRuntime, file);
     },
   };
 }

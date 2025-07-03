@@ -147,3 +147,4 @@ coverage/
 .commit-message.md
 docs/.response.json
 ui/autogen.d.ts
+example/src/app/types/autogen.d.ts

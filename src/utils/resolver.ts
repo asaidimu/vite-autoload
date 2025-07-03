@@ -4,18 +4,35 @@ import type {
   TransformConfig,
   FileMatchConfig,
   ResolvedFile,
-} from "../types";
+} from "../types/transform";
 import { CacheManager } from "./cache";
 import { Logger } from "./logger";
 import pico from "picomatch";
 
+/**
+ * Represents a collection of resolved files belonging to a specific group.
+ */
 export type ResolvedFiles = {
+  /** The name of the group. */
   name: string;
+  /** An array of resolved files within this group. */
   files: Array<ResolvedFile>;
 };
 
-export function resolve(config: FileMatchConfig, logger?: Logger): Array<ResolvedFile> {
-  logger?.debug(`Resolving files for directory: ${config.directory}, match: ${config.match}`);
+/**
+ * Resolves files based on a given file match configuration.
+ *
+ * @param config - The file match configuration.
+ * @param logger - Optional logger instance.
+ * @returns An array of resolved files.
+ */
+export function resolve(
+  config: FileMatchConfig,
+  logger?: Logger,
+): Array<ResolvedFile> {
+  logger?.debug(
+    `Resolving files for directory: ${config.directory}, match: ${config.match}`,
+  );
   const ignore = config.ignore
     ? Array.isArray(config.ignore)
       ? config.ignore
@@ -29,7 +46,9 @@ export function resolve(config: FileMatchConfig, logger?: Logger): Array<Resolve
     onlyFiles: true,
   });
 
-  logger?.debug(`Found ${files.length} files in ${config.directory} matching ${config.match}`);
+  logger?.debug(
+    `Found ${files.length} files in ${config.directory} matching ${config.match}`,
+  );
 
   const result = files.map((file) => {
     const relativePath = path.relative(config.directory, file);
@@ -44,28 +63,66 @@ export function resolve(config: FileMatchConfig, logger?: Logger): Array<Resolve
 }
 
 export interface FileResolverOptions {
+  /** The transformation configurations that define the file groups. */
   readonly config: ReadonlyArray<TransformConfig<any, any, any>>;
-  readonly cache: CacheManager;
+  /** The cache manager for resolved files. */
+  readonly cache: CacheManager<ResolvedFile>;
+  /** Optional logger instance. */
   readonly logger?: Logger;
 }
 
+/**
+ * Interface for a file resolver that manages and tracks files based on configurations.
+ */
 export interface FileResolver {
+  /** Initializes the file resolver, populating it with initial files. */
   readonly initialize: () => void;
+  /**
+   * Adds a file to be tracked by the resolver.
+   * @param file - The absolute path of the file to add.
+   */
   readonly addFile: (file: string) => void;
+  /**
+   * Removes a file from being tracked by the resolver.
+   * @param file - The absolute path of the file to remove.
+   */
   readonly removeFile: (file: string) => void;
+  /**
+   * Checks if a file is currently tracked by the resolver.
+   * @param file - The absolute path of the file to check.
+   * @returns True if the file is tracked, false otherwise.
+   */
   readonly hasFile: (file: string) => boolean;
+  /**
+   * Retrieves all resolved file entries, grouped by their configuration.
+   * @returns An array of ResolvedFiles objects.
+   */
   readonly getAllEntries: () => ReadonlyArray<ResolvedFiles>;
+  /**
+   * Retrieves the versions of each file group, indicating changes.
+   * @returns A Map where keys are group names and values are their versions.
+   */
+  readonly getVersions: () => Map<string, number>;
 }
 
+/**
+ * Creates a file resolver instance.
+ *
+ * @param options - The options for the file resolver.
+ * @returns A FileResolver instance.
+ */
 export function createFileResolver(options: FileResolverOptions): FileResolver {
   const { config, cache, logger } = options;
 
   const groupCache = new Map<string, Map<string, ResolvedFile>>();
+  const _versions = new Map<string, number>();
 
   function initializeGroupCache(): void {
     groupCache.clear();
+    _versions.clear();
     for (const groupConfig of config) {
       groupCache.set(groupConfig.name, new Map());
+      _versions.set(groupConfig.name, 0);
     }
   }
 
@@ -83,6 +140,7 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
           cache.set(entry.file, entry);
           groupFiles.set(entry.file, entry);
         }
+        _versions.set(groupConfig.name, _versions.get(groupConfig.name)! + 1);
       }
 
       const totalFiles = Array.from(groupCache.values()).reduce(
@@ -118,6 +176,7 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
         groupFiles.set(file, entry);
 
         logger?.debug(`Added ${file} to group ${groupConfig.name}`);
+        _versions.set(groupConfig.name, _versions.get(groupConfig.name)! + 1);
       }
     }
   }
@@ -128,8 +187,11 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
     cache.delete(file);
 
     // Remove from all groups
-    for (const groupFiles of groupCache.values()) {
-      groupFiles.delete(file);
+    for (const groupConfig of config) {
+      const groupFiles = groupCache.get(groupConfig.name)!;
+      if (groupFiles.delete(file)) {
+        _versions.set(groupConfig.name, _versions.get(groupConfig.name)! + 1);
+      }
     }
   }
 
@@ -158,5 +220,6 @@ export function createFileResolver(options: FileResolverOptions): FileResolver {
     removeFile,
     hasFile,
     getAllEntries,
+    getVersions: () => _versions,
   };
 }

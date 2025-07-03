@@ -1,9 +1,17 @@
-import type { ManifestConfig } from "../types";
+import type { ManifestConfig } from "../types/manifest"; // Adjusted import path
 import path from "path";
 import fs from "fs";
 
 import { Logger } from "../utils/logger";
 
+/**
+ * Generates a web manifest file based on the provided configuration.
+ *
+ * @param config - The manifest configuration.
+ * @param outDir - The output directory for the manifest file.
+ * @param logger - Optional logger instance.
+ * @returns A promise that resolves to the output path of the manifest file.
+ */
 export async function generateManifest(
   config: ManifestConfig,
   outDir: string,
@@ -35,7 +43,27 @@ export async function generateManifest(
   );
 
   const outputPath = path.join(outDir, config.output || "manifest.webmanifest");
-  await fs.promises.writeFile(outputPath, manifestContent);
+
+  let existingContent = "";
+  try {
+    existingContent = await fs.promises.readFile(outputPath, "utf-8");
+  } catch (error: any) {
+    if (error.code !== "ENOENT") {
+      logger?.error(
+        `Error reading existing manifest file ${outputPath}:`,
+        error,
+      );
+    }
+  }
+
+  if (existingContent !== manifestContent) {
+    await fs.promises.writeFile(outputPath, manifestContent);
+    logger?.debug(`Web manifest generated at: ${outputPath}`);
+  } else {
+    logger?.debug(
+      `Web manifest content unchanged, skipping write: ${outputPath}`,
+    );
+  }
 
   return outputPath;
 }

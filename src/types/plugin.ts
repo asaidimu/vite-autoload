@@ -1,8 +1,8 @@
 import { ComponentConfig } from "./components";
-import type { ManifestConfig } from "./manifest"; // Assuming manifest.ts holds ManifestConfig
-import type { SitemapConfig } from "./sitemap"; // Assuming sitemap.ts holds SitemapConfig
+import type { ManifestConfig } from "./manifest";
+import type { SitemapConfig } from "./sitemap";
 import { ExtractFunction } from "./transform";
-import type { WatchOptions } from "./watch"; // Assuming watch.ts holds WatchOptions
+import type { WatchOptions } from "./watch";
 
 /**
  * Log levels for controlling verbosity of output.

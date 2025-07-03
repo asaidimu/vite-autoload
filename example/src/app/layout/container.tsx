@@ -1,8 +1,8 @@
 // WidgetContainer.tsx
-import React, { Suspense } from "react";
-import type { Widget, WidgetData } from "@/app/types/widget";
-import Loader from "@/components/ui/loader";
+import type { Widget } from "@/app/types/widget";
 import { Card } from "@/components/ui/card";
+import Loader from "@/components/ui/loader";
+import React, { Suspense } from "react";
 
 /**@ts-ignore */
 import widgets from "virtual:widgets";
@@ -12,9 +12,9 @@ interface WidgetProps {
 }
 
 const WidgetPosition: React.FC<WidgetProps> = ({ data }) => {
-  const { title, description, path, position, span } = data;
+  const { path, position, span } = data;
   const columnSpan = span?.column || 1; // Correctly access span.column
-  const rowSpan = span?.row || 1;       // Correctly access span.row
+  const rowSpan = span?.row || 1; // Correctly access span.row
 
   const widgetStyle: React.CSSProperties = {
     gridColumnStart: position.column,
@@ -49,12 +49,14 @@ const WidgetContainer: React.FC = () => {
   return (
     <div
       className="
+        h-full
+        relative
         flex-grow
         min-w-full
         grid
-        grid-cols-12              /* Base: 12 columns */
-        auto-rows-[minmax(150px,auto)] /* Equivalent to grid-auto-rows: minmax(150px, auto) */
-        gap-4                     /* 16px gap */
+        grid-cols-12
+        auto-rows-[minmax(150px,auto)]
+        gap-4
       "
     >
       {(widgets as Array<Widget>).map((widget) => (

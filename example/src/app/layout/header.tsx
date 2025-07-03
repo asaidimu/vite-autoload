@@ -1,6 +1,6 @@
 import {
-    NavigationBarLeft,
-    NavigationBarRight
+  NavigationBarLeft,
+  NavigationBarRight,
 } from "@/components/navigation-bar";
 import { UserMenu } from "./user-menu";
 
@@ -14,8 +14,7 @@ export default function ApplicationHeader() {
   return (
     <>
       <NavigationBarLeft>
-      <h1 className="text-4xl font-bold capitalize"
-      > Hello, {user.name} </h1>
+        <h1 className="text-4xl font-bold capitalize"> Hello, {user.name} </h1>
       </NavigationBarLeft>
       <NavigationBarRight>
         <UserMenu user={user} />

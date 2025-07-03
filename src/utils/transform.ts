@@ -2,25 +2,44 @@ import type {
   ResolvedFile,
   TransformConfig,
   TransformContext,
-  BuildContext,
   FileMatchConfig,
-} from "../types";
-import { ResolvedFiles } from "./resolver";
+} from "../types/transform";
+import type { BuildContext } from "../types/build";
 import { createUriTransformer } from "./uri";
 import { Logger } from "./logger";
 
+/**
+ * Options for the data processor.
+ */
 export interface DataProcessorOptions {
+  /** The transformation configurations to apply. */
   readonly config: ReadonlyArray<TransformConfig<any, any, any>>;
+  /** Optional logger instance. */
   readonly logger?: Logger;
 }
 
+/**
+ * Interface for a data processor that transforms and aggregates data.
+ */
 export interface DataProcessor {
+  /**
+   * Processes a record of entries, applying transformations and aggregations.
+   * @param entries - A record where keys are module names and values are arrays of resolved files or raw data.
+   * @param context - The build context.
+   * @returns A promise that resolves to a record of processed data arrays.
+   */
   readonly processEntries: (
     entries: Record<string, Array<ResolvedFile | any>>,
     context: BuildContext,
   ) => Promise<Record<string, Array<any>>>;
 }
 
+/**
+ * Creates a data processor instance.
+ *
+ * @param options - The options for the data processor.
+ * @returns A DataProcessor instance.
+ */
 export function createDataProcessor(
   options: DataProcessorOptions,
 ): DataProcessor {
@@ -39,20 +58,20 @@ export function createDataProcessor(
 
     // If it's a ResolvedFile, apply URI transformation
     if (
-      typeof item === 'object' &&
+      typeof item === "object" &&
       item !== null &&
-      'uri' in item &&
-      'path' in item &&
-      'file' in item
+      "uri" in item &&
+      "path" in item &&
+      "file" in item
     ) {
       const entry = item as ResolvedFile;
       // Only apply prefix if the input was a FileMatchConfig
       let prefix: string | undefined;
       if (
-        typeof moduleConfig.input === 'object' &&
+        typeof moduleConfig.input === "object" &&
         moduleConfig.input !== null &&
-        'directory' in moduleConfig.input &&
-        'match' in moduleConfig.input
+        "directory" in moduleConfig.input &&
+        "match" in moduleConfig.input
       ) {
         prefix = (moduleConfig.input as FileMatchConfig).prefix;
       }
@@ -67,19 +86,20 @@ export function createDataProcessor(
     }
 
     if (moduleConfig.transform) {
-      logger?.debug(`Applying custom transform for module: ${moduleConfig.name}`);
+      logger?.debug(
+        `Applying custom transform for module: ${moduleConfig.name}`,
+      );
       const transformContext: TransformContext = {
         data: allData,
         environment: context.environment,
       };
 
-      return moduleConfig.transform(
-        processedItem,
-        transformContext,
-      );
+      return moduleConfig.transform(processedItem, transformContext);
     }
 
-    logger?.debug(`No custom transform for module: ${moduleConfig.name}, returning processed item.`);
+    logger?.debug(
+      `No custom transform for module: ${moduleConfig.name}, returning processed item.`,
+    );
     return processedItem; // Default return if no transform function
   }
 
@@ -87,7 +107,9 @@ export function createDataProcessor(
     entries: Record<string, Array<ResolvedFile | any>>,
     context: BuildContext,
   ): Promise<Record<string, Array<any>>> {
-    logger?.debug(`Processing entries for ${Object.keys(entries).length} modules.`);
+    logger?.debug(
+      `Processing entries for ${Object.keys(entries).length} modules.`,
+    );
     const result: Record<string, Array<any>> = {};
 
     // First pass: transform all entries
@@ -98,7 +120,9 @@ export function createDataProcessor(
         continue;
       }
 
-      logger?.debug(`Transforming items for module: ${moduleKey}. Total items: ${moduleItems.length}`);
+      logger?.debug(
+        `Transforming items for module: ${moduleKey}. Total items: ${moduleItems.length}`,
+      );
       const transformedItems = await Promise.all(
         moduleItems.map((item) =>
           transformItem(item, moduleConfig, context, result),

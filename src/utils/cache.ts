@@ -1,19 +1,25 @@
-import type { ResolvedFile } from "../types";
 import { Logger } from "./logger";
 
-export interface CacheManager {
+export interface CacheManager<T> {
   readonly size: number;
   readonly clear: () => void;
-  readonly set: (key: string, entry: ResolvedFile) => void;
-  readonly get: (key: string) => ResolvedFile | undefined;
+  readonly set: (key: string, entry: T) => void;
+  readonly get: (key: string) => T | undefined;
   readonly has: (key: string) => boolean;
   readonly delete: (key: string) => boolean;
-  readonly values: () => IterableIterator<ResolvedFile>;
-  readonly entries: () => IterableIterator<[string, ResolvedFile]>;
+  readonly values: () => IterableIterator<T>;
+  readonly entries: () => IterableIterator<[string, T]>;
 }
 
-export function createCacheManager(logger?: Logger): CacheManager {
-  const cache = new Map<string, ResolvedFile>();
+/**
+ * Creates a cache manager instance.
+ *
+ * @template T The type of values stored in the cache.
+ * @param logger - Optional logger instance for debugging cache operations.
+ * @returns A CacheManager instance.
+ */
+export function createCacheManager<T>(logger?: Logger): CacheManager<T> {
+  const cache = new Map<string, T>();
 
   return {
     get size() {
@@ -25,12 +31,12 @@ export function createCacheManager(logger?: Logger): CacheManager {
       logger?.debug("Cache cleared");
     },
 
-    set(key: string, entry: ResolvedFile): void {
+    set(key: string, entry: T): void {
       cache.set(key, entry);
       logger?.debug(`Cache entry added: ${key}`);
     },
 
-    get(key: string): ResolvedFile | undefined {
+    get(key: string): T | undefined {
       logger?.debug(`Cache: Attempting to get key: ${key}`);
       const entry = cache.get(key);
       if (entry) {
@@ -44,7 +50,9 @@ export function createCacheManager(logger?: Logger): CacheManager {
     has(key: string): boolean {
       logger?.debug(`Cache: Checking if key exists: ${key}`);
       const exists = cache.has(key);
-      logger?.debug(`Cache: Key ${key} ${exists ? 'exists' : 'does not exist'}.`);
+      logger?.debug(
+        `Cache: Key ${key} ${exists ? "exists" : "does not exist"}.`,
+      );
       return exists;
     },
 
@@ -58,12 +66,12 @@ export function createCacheManager(logger?: Logger): CacheManager {
       return deleted;
     },
 
-    values(): IterableIterator<ResolvedFile> {
+    values(): IterableIterator<T> {
       logger?.debug("Cache: Retrieving all values.");
       return cache.values();
     },
 
-    entries(): IterableIterator<[string, ResolvedFile]> {
+    entries(): IterableIterator<[string, T]> {
       logger?.debug("Cache: Retrieving all entries.");
       return cache.entries();
     },

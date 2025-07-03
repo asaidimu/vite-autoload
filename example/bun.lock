@@ -33,7 +33,7 @@
         "vaul": "^1.1.2",
       },
       "devDependencies": {
-        "@asaidimu/vite-autoload": "^6.1.0",
+        "@asaidimu/vite-autoload": "^6.2.0",
         "@eslint/js": "^9.30.1",
         "@tabler/icons-react": "^3.34.0",
         "@types/node": "^24.0.10",
@@ -54,7 +54,7 @@
   "packages": {
     "@ampproject/remapping": ["@ampproject/remapping@2.3.0", "", { "dependencies": { "@jridgewell/gen-mapping": "^0.3.5", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw=="],
 
-    "@asaidimu/vite-autoload": ["@asaidimu/vite-autoload@6.1.0", "", {}, "sha512-nXuVZVRTzVIImiRxDL3tXMAPtu7A9fKsTATA4OyG6ot+jfbGdoVordRvaYuQnsiHTZGquES7Qut0aE8r7rugzg=="],
+    "@asaidimu/vite-autoload": ["@asaidimu/vite-autoload@6.2.0", "", {}, "sha512-e5l5vm4/RF8LJ2sHyJzTmXtsJB69yWxN7Hn8UQ+kpJyRUVb3dgy0M4jjtl91NraqIuEjnwt1MCj3kSkMxIZdBg=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.27.1", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.27.1", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg=="],
 

@@ -6,7 +6,7 @@ export default function TrendsOverview() {
 }
 
 export const metadata: WidgetData = {
-    title: "Hello Widget",
+    title: "Hella Widget",
     description: "A sample widget",
     name: "lists",
     position: {

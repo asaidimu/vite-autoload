@@ -1,32 +1,51 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { generateTypes } from "../generators/types-generator";
-import { Logger } from "../utils/logger";
 import { generateManifest } from "../generators/manifest-generator";
 import { generateSitemap } from "../generators/sitemap-generator";
-import { PluginContext } from "./types";
+import { PluginConfig, PluginRuntime } from "./types";
 import { fnv1a64Hash } from "../utils/hash";
+import { ModuleGenerator } from "../generators/generator";
+import { ViteAdapter } from "./vite-adapter";
 
 /**
  * Calculates a hash for any data structure, including file content hashes for ResolvedFile objects.
+ *
+ * @param data - The data to hash.
+ * @param logger - Optional logger instance.
+ * @returns The calculated hash as a string.
  */
-export const getDataHash = async (data: any, logger?: Logger): Promise<string> => {
+export const getDataHash = async (
+  data: any,
+  logger?: PluginConfig["logger"],
+): Promise<string> => {
   logger?.debug("Calculating data hash...");
-  const finalHash = fnv1a64Hash(data)
+  const finalHash = fnv1a64Hash(data);
   logger?.debug(`Data hash calculated: ${finalHash}`);
   return finalHash;
 };
 
 /**
  * Checks if a virtual module's content has changed based on its data hash.
+ * This function modifies the virtualModuleCache in PluginRuntime.
+ *
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @param moduleName - The name of the virtual module.
+ * @param generators - An array of module generators.
+ * @returns True if the virtual module has changed, false otherwise.
  */
 export const hasVirtualModuleChanged = async (
-  ctx: PluginContext,
+  config: PluginConfig,
+  runtime: PluginRuntime,
   moduleName: string,
+  generators: ModuleGenerator[],
 ): Promise<boolean> => {
-  const { logger } = ctx;
+  const { logger, nameIndex } = config;
+  const { virtualModuleCache } = runtime;
+
   logger.debug(`Checking if virtual module ${moduleName} has changed...`);
-  const found = ctx.nameIndex.lookup(moduleName);
+  const found = nameIndex.lookup(moduleName);
 
   if (!found) {
     logger.warn(`Virtual module ${moduleName} not found in NameIndex.`);
@@ -34,7 +53,7 @@ export const hasVirtualModuleChanged = async (
   }
 
   // Find the generator for the component
-  const generator = ctx.generators.find((g) => g.name === found.component);
+  const generator = generators.find((g) => g.name === found.component);
   if (!generator) {
     logger.error(`Generator for component ${found.component} not found.`);
     return false;
@@ -43,18 +62,20 @@ export const hasVirtualModuleChanged = async (
   // Pass the group name if it exists, otherwise undefined (for component-level modules)
   const dataContext = {
     production: false,
-    name: found.group ? moduleName : undefined
+    name: found.group ? moduleName : undefined,
   };
 
   const currentData = await generator.data(dataContext);
   const currentHash = await getDataHash(currentData, logger);
-  const previousHash = ctx.virtualModuleCache.get(moduleName);
+  const previousHash = virtualModuleCache.get(moduleName);
 
-  logger.debug(`Module ${moduleName}: Current hash: ${currentHash}, Previous hash: ${previousHash}`);
+  logger.debug(
+    `Module ${moduleName}: Current hash: ${currentHash}, Previous hash: ${previousHash}`,
+  );
 
   const hasChanged = previousHash !== currentHash;
   if (hasChanged) {
-    ctx.virtualModuleCache.set(moduleName, currentHash);
+    virtualModuleCache.set(moduleName, currentHash);
     logger.debug(`Virtual module ${moduleName} has changed`);
   } else {
     logger.debug(`Virtual module ${moduleName} has NOT changed`);
@@ -64,9 +85,15 @@ export const hasVirtualModuleChanged = async (
 
 /**
  * Generates TypeScript definition files based on plugin options and current data.
+ *
+ * @param config - The plugin configuration.
+ * @param generators - An array of module generators.
  */
-export async function regenerateTypes(ctx: PluginContext) {
-  const { options, logger, generators } = ctx;
+export async function regenerateTypes(
+  config: PluginConfig,
+  generators: ModuleGenerator[],
+) {
+  const { options, logger } = config;
   const exportTypesPath = options.settings.export?.types;
   if (!exportTypesPath) return;
 
@@ -88,8 +115,10 @@ export async function regenerateTypes(ctx: PluginContext) {
           .map((item: any) => item && item[property])
           .filter(Boolean)
           .filter((item) => {
-            if (typeof item !== 'string') {
-              logger.warn(`Skipping non-string value for type generation: ${JSON.stringify(item)}`);
+            if (typeof item !== "string") {
+              logger.warn(
+                `Skipping non-string value for type generation: ${JSON.stringify(item)}`,
+              );
               return false;
             }
             return true;
@@ -115,16 +144,25 @@ export async function regenerateTypes(ctx: PluginContext) {
 
 /**
  * Generates the sitemap.xml file.
+ *
+ * @param adapter - The Vite adapter.
+ * @param config - The plugin configuration.
+ * @param generators - An array of module generators.
  */
-export async function emitSitemap(this: any, ctx: PluginContext) {
-  if (!ctx.options.settings.sitemap || !ctx.config.isProduction) return;
+export async function emitSitemap(
+  adapter: ViteAdapter,
+  config: PluginConfig,
+  generators: ModuleGenerator[],
+) {
+  if (!config.options.settings.sitemap || !config.resolvedConfig.isProduction)
+    return;
 
-  const { baseUrl, exclude = [] } = ctx.options.settings.sitemap;
+  const { baseUrl, exclude = [] } = config.options.settings.sitemap;
   const sitemapEntries: { route: string; metadata: any }[] = [];
 
-  for (const [index, component] of ctx.options.components.entries()) {
+  for (const [index, component] of config.options.components.entries()) {
     if (component.strategy.sitemap) {
-      const generator = ctx.generators[index];
+      const generator = generators[index];
       const data = await generator.data({ production: true });
       const property = component.strategy.sitemap.property;
 
@@ -139,19 +177,34 @@ export async function emitSitemap(this: any, ctx: PluginContext) {
           }
         });
     }
-  };
-  const sitemap = generateSitemap(sitemapEntries, baseUrl, exclude, ctx.logger);
+  }
+  const sitemap = generateSitemap(
+    sitemapEntries,
+    baseUrl,
+    exclude,
+    config.logger,
+  );
 
-  const outputPath = path.join(ctx.config.build.outDir, "sitemap.xml");
+  const outputPath = path.join(
+    config.resolvedConfig.build.outDir,
+    "sitemap.xml",
+  );
   await fs.writeFile(outputPath, sitemap, "utf-8");
-  ctx.logger.info(`Sitemap written to ${outputPath}`);
+  adapter.emitFile({ type: "asset", fileName: "sitemap.xml", source: sitemap }); // Use adapter.emitFile
+  config.logger.info(`Sitemap written to ${outputPath}`);
 }
 
 /**
  * Generates the web manifest file.
+ *
+ * @param config - The plugin configuration.
  */
-export async function emitManifest(ctx: PluginContext) {
-  if (ctx.options.settings.manifest) {
-    await generateManifest(ctx.options.settings.manifest, ctx.config.build.outDir, ctx.logger);
+export async function emitManifest(config: PluginConfig) {
+  if (config.options.settings.manifest) {
+    await generateManifest(
+      config.options.settings.manifest,
+      config.resolvedConfig.build.outDir,
+      config.logger,
+    );
   }
 }

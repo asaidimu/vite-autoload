@@ -7,18 +7,23 @@ export function generateMd5Hash(input: string): string {
 /**
  * Serializes a value into a JSON-like string representation, handling various types
  * including objects, arrays, primitives, and circular references.
- * @param {any} value - The value to serialize.
- * @param {WeakMap} [seen] - A WeakMap to track visited objects and detect circular references.
- * @returns {string} A string representation of the serialized value.
+ *
+ * @param value - The value to serialize.
+ * @param seen - A WeakMap to track visited objects and detect circular references.
+ * @returns A string representation of the serialized value.
  */
-function stableSerialize(value: any, seen: WeakMap<any, any> = new WeakMap()): string {
+function stableSerialize(
+  value: any,
+  seen: WeakMap<any, any> = new WeakMap(),
+): string {
   if (value === undefined) return "undefined";
   if (typeof value === "function" || typeof value === "symbol") return "";
   if (typeof value === "string") return `"${value}"`;
   if (typeof value === "number" || typeof value === "boolean" || value === null)
     return String(value);
 
-  if (Array.isArray(value)) return `[${value.map((v) => stableSerialize(v, seen)).join(",")}]`;
+  if (Array.isArray(value))
+    return `[${value.map((v) => stableSerialize(v, seen)).join(",")}]`;
 
   if (typeof value === "object") {
     if (seen.has(value)) return `"__circular__"`;
@@ -35,8 +40,9 @@ function stableSerialize(value: any, seen: WeakMap<any, any> = new WeakMap()): s
 
 /**
  * Computes the FNV-1a 64-bit hash of the given data.
- * @param {any} data - The data to hash. Can be any type that can be serialized.
- * @returns {string} The FNV-1a 64-bit hash as a hexadecimal string.
+ *
+ * @param data - The data to hash. Can be any type that can be serialized.
+ * @returns The FNV-1a 64-bit hash as a hexadecimal string.
  */
 export function fnv1a64Hash(data: any): string {
   let hashHigh = 0xcbf29ce4;

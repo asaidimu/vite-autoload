@@ -8,7 +8,17 @@ export interface Logger {
   readonly error: (message: string, error?: Error | unknown) => void;
 }
 
-export function createLogger(viteLogger: ViteLogger, logLevel: LogLevel = "info"): Logger {
+/**
+ * Creates a logger instance that wraps Vite's logger, filtering messages based on a specified log level.
+ *
+ * @param viteLogger - The Vite logger instance.
+ * @param logLevel - The minimum log level to display messages. Defaults to "info".
+ * @returns A Logger instance.
+ */
+export function createLogger(
+  viteLogger: ViteLogger,
+  logLevel: LogLevel = "info",
+): Logger {
   const levels: Record<LogLevel, number> = {
     debug: 0,
     info: 1,
@@ -36,7 +46,8 @@ export function createLogger(viteLogger: ViteLogger, logLevel: LogLevel = "info"
     },
     error: (message, error) => {
       if (currentLevel <= levels.error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         viteLogger.error(`[vite-autoload] ERROR: ${message} ${errorMessage}`);
       }
     },

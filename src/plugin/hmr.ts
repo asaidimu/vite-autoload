@@ -1,6 +1,6 @@
 import path from "path";
 import { normalizePath } from "vite";
-import { PluginContext } from "./types";
+import { PluginConfig, PluginRuntime, PluginContext } from "./types";
 import { hasVirtualModuleChanged, regenerateTypes, getDataHash } from "./utils";
 import {
   updateDependencyMappings,
@@ -8,25 +8,44 @@ import {
 } from "./dependencies";
 import { init, parse as parseImports } from "es-module-lexer";
 import { isJavaScriptLikeModule } from "../utils/checkers";
+import { ModuleGenerator } from "../generators/generator";
+import { ViteAdapter } from "./vite-adapter";
 
 /**
- * The file watcher callback that triggers HMR.
+ * Creates a file watcher callback that triggers HMR.
+ *
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @param generators - An array of module generators.
+ * @returns A function that handles changed files.
  */
-export function createHmrFileWatcherCallback(ctx: PluginContext) {
+export function createHmrFileWatcherCallback(
+  config: PluginConfig,
+  runtime: PluginRuntime,
+  generators: ModuleGenerator[],
+) {
   return async (changedFiles: string[]) => {
-    ctx.logger.debug(`Files changed: ${changedFiles.join(", ")}`);
-    await handleVirtualModuleStructureChange(ctx);
+    config.logger.debug(`Files changed: ${changedFiles.join(", ")}`);
+    await handleVirtualModuleStructureChange(config, runtime, generators);
   };
 }
 
 /**
  * Initializes the dev server by caching data, setting up dependencies, and starting the file watcher.
+ *
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @param generators - An array of module generators.
+ * @param fileWatcher - The file watcher instance.
  */
 export async function initializeDevServer(
-  ctx: PluginContext,
+  config: PluginConfig,
+  runtime: PluginRuntime,
+  generators: ModuleGenerator[],
   fileWatcher: any,
 ) {
-  const { server, generators, virtualModuleCache, logger } = ctx;
+  const { logger } = config;
+  const { virtualModuleCache } = runtime;
 
   logger.info("Initializing dev server...");
 
@@ -41,11 +60,11 @@ export async function initializeDevServer(
   }
 
   logger.debug("Updating dependency mappings...");
-  updateDependencyMappings(ctx);
+  updateDependencyMappings(config, runtime, generators); // Pass generators
 
   logger.info("Starting file watcher...");
   fileWatcher.start();
-  server?.watcher.on("close", () => {
+  runtime.server?.watcher.on("close", () => {
     logger.info("Dev server closed. Stopping file watcher.");
     fileWatcher.stop();
   });
@@ -54,12 +73,22 @@ export async function initializeDevServer(
 
 /**
  * Handles HMR for changes *within* a file that is part of a virtual module.
+ *
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @param file - The path to the changed file.
+ * @returns An array of modules to be hot updated.
  */
-export function handleHotUpdate(ctx: PluginContext, file: string) {
-  const { logger, server, fileToExportMap, importerToVirtualDeps } = ctx;
+export function handleHotUpdate(
+  config: PluginConfig,
+  runtime: PluginRuntime,
+  file: string,
+) {
+  const { logger } = config;
+  const { server, fileToExportMap, importerToVirtualDeps } = runtime;
   if (!server) {
     logger.warn("HMR: Vite server not available.");
-    return;
+    return [];
   }
 
   const normalizedFile = normalizePath(path.resolve(file));
@@ -67,7 +96,7 @@ export function handleHotUpdate(ctx: PluginContext, file: string) {
 
   if (!mapping) {
     logger.debug(`File ${normalizedFile} is not tracked by any virtual module`);
-    return;
+    return [];
   }
 
   logger.debug(
@@ -115,49 +144,73 @@ export function handleHotUpdate(ctx: PluginContext, file: string) {
 
 /**
  * Transforms importer modules to establish dependencies for HMR.
+ *
+ * @param adapter - The Vite adapter.
+ * @param code - The module code.
+ * @param id - The module ID.
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @param generators - An array of module generators.
+ * @returns The transformed code or null.
  */
 export async function transformImporterModule(
-  this: any,
+  adapter: ViteAdapter,
   code: string,
   id: string,
-  ctx: PluginContext,
+  config: PluginConfig,
+  runtime: PluginRuntime,
+  generators: ModuleGenerator[],
 ): Promise<{ code: string; map: null } | null> {
-  ctx.logger.debug(`transformImporterModule called for id: ${id}`);
+  config.logger.debug(`transformImporterModule called for id: ${id}`);
   if (
     id.startsWith("\0") ||
-    !ctx.server ||
-    ctx.config.command !== "serve" ||
+    !runtime.server ||
+    config.resolvedConfig.command !== "serve" ||
     !isJavaScriptLikeModule(id)
   ) {
-    ctx.logger.debug(`Skipping transformation for ${id} due to filter conditions.`);
+    config.logger.debug(
+      `Skipping transformation for ${id} due to filter conditions.`,
+    );
     return null;
   }
 
   try {
     await init;
     const [imports] = parseImports(code);
-    ctx.logger.debug(`Parsed imports for ${id}:`, imports);
+    config.logger.debug(`Parsed imports for ${id}:`, imports);
 
-    const virtualModuleIds = ctx.generators
+    const virtualModuleIds = generators
       .flatMap((g) => Object.keys(g.data({ production: false })))
       .map((key) => `virtual:${key}`);
-    ctx.logger.debug(`Expected virtual module IDs:`, virtualModuleIds);
+    config.logger.debug(`Expected virtual module IDs:`, virtualModuleIds);
 
     const importedVirtualIds = imports
       .map((imp) => imp.n)
       .filter((name) => name && virtualModuleIds.includes(name)) as string[];
-    ctx.logger.debug(`Found imported virtual IDs for ${id}:`, importedVirtualIds);
+    config.logger.debug(
+      `Found imported virtual IDs for ${id}:`,
+      importedVirtualIds,
+    );
 
     if (importedVirtualIds.length > 0) {
-      ctx.logger.debug(`Establishing direct dependencies for ${id} with virtual modules:`, importedVirtualIds);
-      establishDirectDependencies(ctx, id, importedVirtualIds);
-      const hmrInjector = getHmrCodeInjector(ctx).bind(this);
+      config.logger.debug(
+        `Establishing direct dependencies for ${id} with virtual modules:`,
+        importedVirtualIds,
+      );
+      const _establishDirectDependencies = (
+        c: PluginConfig,
+        r: PluginRuntime,
+        i: string,
+        v: string[],
+      ) => establishDirectDependencies(c, r, i, v);
+      _establishDirectDependencies(config, runtime, id, importedVirtualIds);
+      const hmrInjector = getHmrCodeInjector(adapter, config, runtime);
       const result = hmrInjector(id, importedVirtualIds);
-      ctx.logger.debug(`HMR injector result for ${id}:`, result);
+      config.logger.debug(`HMR injector result for ${id}:`, result);
       return result ? { code: code + result.code, map: null } : null;
     }
   } catch (error) {
-    ctx.logger.error(`Failed to transform ${id}:`, error);
+    config.logger.error(`Failed to transform ${id}:`, error);
   }
 
   return null;
@@ -167,11 +220,22 @@ export async function transformImporterModule(
 
 /**
  * Handles HMR for virtual module *structure* changes (e.g., adding/deleting a file).
+ *
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @param generators - An array of module generators.
  */
-async function handleVirtualModuleStructureChange(ctx: PluginContext) {
-  const { server, config, generators, logger } = ctx;
-  if (!server && !config.isProduction) {
-    logger.debug("Skipping virtual module structure change handling: server not available and not in production.");
+async function handleVirtualModuleStructureChange(
+  config: PluginConfig,
+  runtime: PluginRuntime,
+  generators: ModuleGenerator[],
+) {
+  const { logger, resolvedConfig } = config;
+  const { server, virtualModuleCache } = runtime;
+  if (!server && !resolvedConfig.isProduction) {
+    logger.debug(
+      "Skipping virtual module structure change handling: server not available and not in production.",
+    );
     return;
   }
 
@@ -182,18 +246,25 @@ async function handleVirtualModuleStructureChange(ctx: PluginContext) {
     logger.debug(`Checking generator: ${generator.name} for changes.`);
     const data = await generator.data({ production: false });
     for (const moduleName of Object.keys(data)) {
-      if (await hasVirtualModuleChanged(ctx, moduleName)) {
+      if (
+        await hasVirtualModuleChanged(config, runtime, moduleName, generators)
+      ) {
+        // Pass generators
         changedVirtualModules.add(`virtual:${moduleName}`);
         logger.debug(`Virtual module changed: ${moduleName}`);
       }
     }
   }
 
-  logger.debug("Updating dependency mappings after virtual module structure change.");
-  updateDependencyMappings(ctx);
+  logger.debug(
+    "Updating dependency mappings after virtual module structure change.",
+  );
+  updateDependencyMappings(config, runtime, generators); // Pass generators
 
   if (changedVirtualModules.size > 0 && server) {
-    logger.info(`Detected ${changedVirtualModules.size} changed virtual modules. Triggering HMR.`);
+    logger.info(
+      `Detected ${changedVirtualModules.size} changed virtual modules. Triggering HMR.`,
+    );
     const { moduleGraph, hot } = server;
     for (const moduleName of changedVirtualModules) {
       const mod = moduleGraph.getModuleById(`\0${moduleName}`);
@@ -223,32 +294,44 @@ async function handleVirtualModuleStructureChange(ctx: PluginContext) {
       }
     }
     logger.info("Regenerating types after virtual module structure change.");
-    await regenerateTypes(ctx);
+    await regenerateTypes(config, generators); // Pass generators
   } else {
-    logger.debug("No virtual module structure changes detected or server not available.");
+    logger.debug(
+      "No virtual module structure changes detected or server not available.",
+    );
   }
 }
 
 /**
  * Injects HMR boilerplate into modules that import virtual modules.
+ *
+ * @param adapter - The Vite adapter.
+ * @param config - The plugin configuration.
+ * @param runtime - The plugin runtime state.
+ * @returns A function that returns the HMR code to inject.
  */
-function getHmrCodeInjector(ctx: PluginContext) {
+function getHmrCodeInjector(
+  adapter: ViteAdapter,
+  config: PluginConfig,
+  runtime: PluginRuntime,
+) {
   return (
     id: string,
     importedVirtualIds: string[],
   ): { code: string; map: null } | null => {
-    ctx.logger.debug(
+    config.logger.debug(
       `Module ${id} imports virtual modules:`,
       importedVirtualIds,
     );
 
     importedVirtualIds.forEach((virtualId) => {
-      const fileDeps = ctx.virtualModuleDeps.get(virtualId);
+      const fileDeps = runtime.virtualModuleDeps.get(virtualId);
       if (fileDeps) {
         fileDeps.forEach((filePath) => {
-          /* @ts-ignore */
-          (this as any).addWatchFile(filePath);
-          ctx.logger.debug(`Added watch file: ${filePath} for importer: ${id}`);
+          adapter.addWatchFile(filePath); // Use adapter.addWatchFile
+          config.logger.debug(
+            `Added watch file: ${filePath} for importer: ${id}`,
+          );
         });
       }
     });

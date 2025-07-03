@@ -1,43 +1,61 @@
-import { ComponentConfig } from "../types";
+import { ComponentConfig } from "../types/components";
 
 /**
- * Entry in the name index indicating where a named item is located
+ * Represents an entry in the NameIndex, indicating whether it's a component or a group.
  */
-export type NameIndexEntry = {
+interface NameIndexEntry {
+  /** The type of the entry: 'component' or 'group'. */
+  type: "component" | "group";
+  /** The name of the component this entry belongs to. */
   component: string;
-  group?: boolean;
-};
+  /** The name of the group, if the entry is a group. */
+  group?: string;
+}
 
 /**
- * Global name index for tracking unique names across components and groups
+ * Manages a unique index of component and group names to prevent naming conflicts.
  */
 export class NameIndex {
-  private readonly index = new Map<string, NameIndexEntry>();
+  private index = new Map<string, NameIndexEntry>();
 
-  constructor(components: readonly ComponentConfig[]) {
+  /**
+   * Creates an instance of NameIndex.
+   * @param components - An array of ComponentConfig to build the index from.
+   */
+  constructor(components: ComponentConfig[]) {
     this.buildIndex(components);
   }
 
   /**
-   * Build the name index from an array of component configurations
+   * Builds the internal index from the provided component configurations.
+   * @param components - An array of ComponentConfig.
+   * @throws Error if a duplicate name is found.
    */
-  private buildIndex(components: readonly ComponentConfig[]): void {
+  private buildIndex(components: ComponentConfig[]): void {
     for (const component of components) {
-      // Add component name to index
-      this.addToIndex(component.name, { component: component.name });
+      const componentEntry: NameIndexEntry = {
+        type: "component",
+        component: component.name,
+        group: undefined, // Explicitly set to undefined for components
+      };
+      this.addToIndex(component.name, componentEntry);
 
-      // Add each group name to index
       for (const group of component.groups) {
-        this.addToIndex(group.name, {
+        const groupEntry: NameIndexEntry = {
+          type: "group",
           component: component.name,
-          group: true,
-        });
+          group: group.name,
+        };
+        this.addToIndex(group.name, groupEntry);
       }
     }
   }
 
   /**
-   * Add a name to the index, throwing an error if the name already exists
+   * Adds an entry to the index.
+   * @param name - The name to add.
+   * @param entry - The NameIndexEntry associated with the name.
+   * @throws Error if the name already exists in the index.
    */
   private addToIndex(name: string, entry: NameIndexEntry): void {
     if (this.index.has(name)) {
@@ -52,65 +70,11 @@ export class NameIndex {
   }
 
   /**
-   * Look up a name in the index
+   * Looks up an entry in the index by name.
+   * @param name - The name to look up.
+   * @returns The NameIndexEntry if found, otherwise undefined.
    */
   lookup(name: string): NameIndexEntry | undefined {
     return this.index.get(name);
-  }
-
-  /**
-   * Check if a name exists in the index
-   */
-  has(name: string): boolean {
-    return this.index.has(name);
-  }
-
-  /**
-   * Get all names in the index
-   */
-  getAllNames(): string[] {
-    return Array.from(this.index.keys());
-  }
-
-  /**
-   * Get all component names (excluding groups)
-   */
-  getComponentNames(): string[] {
-    return Array.from(this.index.entries())
-      .filter(([, entry]) => !entry.group)
-      .map(([name]) => name);
-  }
-
-  /**
-   * Get all group names for a specific component
-   */
-  getGroupNames(componentName: string): string[] {
-    return Array.from(this.index.entries())
-      .filter(([, entry]) => entry.component === componentName && entry.group)
-      .map(([name]) => name);
-  }
-
-  /**
-   * Get all names (components and groups) for a specific component
-   */
-  getNamesForComponent(componentName: string): string[] {
-    return Array.from(this.index.entries())
-      .filter(([, entry]) => entry.component === componentName)
-      .map(([name]) => name);
-  }
-
-  /**
-   * Get the total number of indexed names
-   */
-  size(): number {
-    return this.index.size;
-  }
-
-  /**
-   * Create a new index from updated component configurations
-   * Useful for rebuilding the index when configurations change
-   */
-  static rebuild(components: readonly ComponentConfig[]): NameIndex {
-    return new NameIndex(components);
   }
 }
