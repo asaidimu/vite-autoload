@@ -16,7 +16,7 @@ export function updateDependencyMappings(
   generators: ModuleGenerator[],
 ) {
   const { logger, resolvedConfig, options } = config;
-  const { fileToExportMap, virtualModuleDeps } = runtime;
+  const { fileToExportMap, virtualModuleDeps, importerToVirtualDeps } = runtime;
 
   logger.debug("Starting to update dependency mappings...");
   fileToExportMap.clear();
