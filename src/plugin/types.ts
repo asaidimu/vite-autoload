@@ -15,25 +15,17 @@ export interface PluginConfig {
 }
 
 /**
- * Mutable runtime state for the plugin, primarily for HMR and dev server interactions.
+ * Mutable runtime state for the plugin.
  */
 export interface PluginRuntime {
   server?: ViteDevServer;
-  fileToExportMap: Map<
-    string,
-    { virtualModule: string; exportKey: string; index: number }
-  >;
-  virtualModuleCache: Map<string, string>;
-  importerToVirtualDeps: Map<string, Set<string>>;
-  virtualModuleDeps: Map<string, Set<string>>;
 }
 
 /**
  * Context for functions that need access to both configuration and runtime state.
- * This will be used sparingly, aiming to pass only necessary parts.
  */
 export interface PluginContext {
   config: PluginConfig;
   runtime: PluginRuntime;
-  generators: ModuleGenerator[]; // Generators are created once, but their methods are called with runtime context
+  generators: ModuleGenerator[];
 }

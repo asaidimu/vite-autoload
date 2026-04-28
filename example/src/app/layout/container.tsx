@@ -3,9 +3,8 @@ import type { Widget } from "@/app/types/widget";
 import { Card } from "@/components/ui/card";
 import Loader from "@/components/ui/loader";
 import React, { Suspense } from "react";
-
 /**@ts-ignore */
-import widgets from "virtual:widgets";
+import widgets from "virtual:widgets"; // contains widget information that has been autoloaded
 
 interface WidgetProps {
   data: Widget;
@@ -23,7 +22,8 @@ const WidgetPosition: React.FC<WidgetProps> = ({ data }) => {
     gridRowEnd: `span ${rowSpan}`,
   };
 
-  const Component = React.lazy(async () => {
+  const Component =
+      React.lazy(async () => {
     const value = await import(/* @vite-ignore */ path);
     return value;
   });

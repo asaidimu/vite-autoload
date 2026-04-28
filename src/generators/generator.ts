@@ -24,13 +24,13 @@ interface GeneratorApi {
    * @param context - The build context.
    * @returns An array of resolved files.
    */
-  readonly getGroups: (context: BuildContext) => ReadonlyArray<ResolvedFile>;
+  readonly groups: (context: BuildContext) => ReadonlyArray<ResolvedFile>;
   /**
    * Retrieves processed data for the generator.
    * @param context - The build context.
    * @returns A promise that resolves to a record of data arrays, keyed by group name.
    */
-  readonly getData: (
+  readonly data: (
     context: BuildContext,
   ) => Promise<Record<string, Array<any>>>;
   /**
@@ -38,9 +38,10 @@ interface GeneratorApi {
    * @param context - The build context.
    * @returns A promise that resolves to the generated code as a string or a record of strings.
    */
-  readonly getCode: (
+  readonly code: (
     context: BuildContext,
   ) => Promise<string | Record<string, string>>;
+
   /**
    * Checks if a file is tracked by the generator.
    * @param file - The file path to check.
@@ -57,6 +58,7 @@ interface GeneratorApi {
    * @param file - The file path to remove.
    */
   readonly removeFile: (file: string) => void;
+
   /**
    * Finds a group by its name.
    * @param searchName - The name of the group to find.
@@ -286,9 +288,9 @@ export function createCollectionGenerator(
   return {
     name,
     config,
-    getGroups,
-    getData,
-    getCode,
+    groups: getGroups,
+    data: getData,
+    code: getCode,
     hasFile,
     addFile,
     removeFile,
@@ -307,9 +309,9 @@ export function createModuleGenerator(
   return {
     name: generator.name,
     config: generator.config,
-    modules: generator.getGroups,
-    data: generator.getData,
-    code: generator.getCode,
+    modules: generator.groups,
+    data: generator.data,
+    code: generator.code,
     match: generator.hasFile,
     add: generator.addFile,
     remove: generator.removeFile,

@@ -16,12 +16,12 @@ export function updateDependencyMappings(
   generators: ModuleGenerator[],
 ) {
   const { logger, resolvedConfig, options } = config;
-  const { fileToExportMap, virtualModuleDeps, importerToVirtualDeps } = runtime;
+  // const { fileToExportMap, virtualModuleDeps, importerToVirtualDeps } = runtime;
 
   logger.debug("Starting to update dependency mappings...");
-  fileToExportMap.clear();
+  /* fileToExportMap.clear();
   virtualModuleDeps.clear();
-  importerToVirtualDeps.clear();
+  importerToVirtualDeps.clear(); */
 
   const chunkSize = options.settings.chunkSize || 100;
 
@@ -39,11 +39,6 @@ export function updateDependencyMappings(
       chunk.forEach((entry: any, index: number) => {
         if (entry?.path) {
           const normalizedPath = normalizePath(entry.path);
-          fileToExportMap.set(normalizedPath, {
-            virtualModule,
-            exportKey,
-            index: i + index,
-          });
           const absolutePath = path.resolve(
             resolvedConfig.root || process.cwd(),
             entry.path.slice(1),

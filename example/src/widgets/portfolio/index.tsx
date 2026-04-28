@@ -1,12 +1,10 @@
 import type { WidgetData } from "@/app/types/widget"
+import PortfolioOverview from "./component"
 
-export default function PortfolioOverview() {
-    return <h2>Portfolio</h2>
-}
-
+export default PortfolioOverview
 
 export const metadata: WidgetData = {
-    title: "Hello, Widget",
+    title: "Partfolio Widget",
     description: "A sample widget",
     name: "portfolio",
     position: {
@@ -14,7 +12,7 @@ export const metadata: WidgetData = {
         column: 1
     },
     span :{
-        column: 3
+        column: 4,
     }
 }
 

@@ -1,4 +1,4 @@
-// Adjust import paths based on your file structure after splitting types
+// vite-autoload-config.ts
 import type {
   PluginOptions,
   ComponentConfig,

@@ -86,6 +86,7 @@ function transformImportStrings(obj: any): any {
  * @returns A MetadataExtractor instance.
  */
 export function createMetadataExtractor(
+  cwd: string,
   schema: z.ZodType,
   options: { exportName?: string | "default" } = { exportName: "metadata" },
 ): MetadataExtractor {
@@ -96,6 +97,7 @@ export function createMetadataExtractor(
   return {
     async extract(filePath: string) {
       const metadata = await parseTypeScriptFileForExportedMetadata(
+        cwd,
         filePath,
         options.exportName || "metadata",
       );
@@ -139,7 +141,7 @@ export async function extract<T>({
   name,
 }: Props): Promise<T | null> {
   try {
-    const extractor = createMetadataExtractor(schema, { exportName: name });
+    const extractor = createMetadataExtractor(process.cwd(), schema, { exportName: name });
     const value = await extractor.extract(filePath);
     return value as T | null;
   } catch (error) {

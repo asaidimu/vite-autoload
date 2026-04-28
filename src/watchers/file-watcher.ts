@@ -15,6 +15,7 @@ export interface FileWatcherApi {
   readonly stop: () => void;
 }
 
+export type FileChangeType = "add" | "change" | "unlink"
 /**
  * Creates a file watcher instance that monitors changes in specified directories.
  *
@@ -26,7 +27,7 @@ export interface FileWatcherApi {
 export function createFileWatcher(
   options: PluginOptions,
   logger: Logger,
-  onChange: (changedFiles: string[]) => Promise<void>,
+  onChange: (type: FileChangeType, changedFile: string) => Promise<void>,
 ): FileWatcherApi {
   let watcher: chokidar.FSWatcher | null = null;
 
@@ -57,7 +58,7 @@ export function createFileWatcher(
 
   // Increase debounce time and add queue handling
   let isProcessing = false;
-  const debouncedOnChange = debounce(async (changedFiles: string[]) => {
+  const debouncedOnChange = debounce(async (type: FileChangeType, changedFile: string) => {
     if (isProcessing) {
       logger.debug(
         "File watcher: debouncedOnChange skipped, already processing.",
@@ -68,7 +69,7 @@ export function createFileWatcher(
     logger.debug("File watcher: debouncedOnChange triggered.");
     try {
       isProcessing = true;
-      await onChange(changedFiles);
+      await onChange(type, changedFile);
       logger.debug("File watcher: onChange callback executed.");
     } finally {
       isProcessing = false;
@@ -111,21 +112,21 @@ export function createFileWatcher(
           // Skip if this is the types file
           if (typesFile && path === typesFile) return;
           logger.debug(`File ${path} has been added`);
-          debouncedOnChange([path]); // Pass the changed file
+          debouncedOnChange("add", path); // Pass the changed file
         })
         .on("change", (path: string) => {
           logger.debug(`File watcher: File changed: ${path}`);
           // Skip if this is the types file
           if (typesFile && path === typesFile) return;
           logger.debug(`File ${path} has been changed`);
-          debouncedOnChange([path]); // Pass the changed file
+          debouncedOnChange("change", path); // Pass the changed file
         })
         .on("unlink", (path: string) => {
           logger.debug(`File watcher: File removed: ${path}`);
           // Skip if this is the types file
           if (typesFile && path === typesFile) return;
           logger.debug(`File ${path} has been removed`);
-          debouncedOnChange([path]); // Pass the changed file
+          debouncedOnChange("unlink", path); // Pass the changed file
         })
         .on("error", (error: any) => {
           logger.error("Watcher error:", error);

@@ -66,12 +66,13 @@ function findImportDeclarations(
  * @returns A string representing a dynamic import expression.
  */
 function createDynamicImport(
+  cwd: string,
   importInfo: ImportedModule,
   sourceDir: string,
 ): string {
   const resolvedPath = importInfo.path.startsWith(".")
     ? path
-        .relative(process.cwd(), path.resolve(sourceDir, importInfo.path))
+        .relative(cwd, path.resolve(sourceDir, importInfo.path))
         .replace(/\\/g, "/")
         .replace(/^src\//, "@/")
     : importInfo.path;
@@ -83,6 +84,7 @@ function createDynamicImport(
  * Extracts values from an object literal expression
  */
 function extractObjectLiteralValue(
+  cwd: string,
   node: ts.ObjectLiteralExpression,
   sourceFile: ts.SourceFile,
   imports: Map<string, ImportedModule>,
@@ -95,6 +97,7 @@ function extractObjectLiteralValue(
       const propertyName = property.name.getText().replace(/['"]/g, "");
 
       obj[propertyName] = evaluateExpression(
+        cwd,
         property.initializer,
         sourceFile,
         imports,
@@ -110,6 +113,7 @@ function extractObjectLiteralValue(
  * Extracts value from a TypeScript AST node
  */
 function extractValue(
+  cwd: string,
   node: ts.Node,
   sourceFile: ts.SourceFile,
   imports: Map<string, ImportedModule>,
@@ -130,17 +134,17 @@ function extractValue(
   }
   if (ts.isArrayLiteralExpression(node)) {
     return node.elements.map((element) =>
-      evaluateExpression(element, sourceFile, imports, sourceDir),
+      evaluateExpression(cwd, element, sourceFile, imports, sourceDir),
     );
   }
   if (ts.isObjectLiteralExpression(node)) {
-    return extractObjectLiteralValue(node, sourceFile, imports, sourceDir);
+    return extractObjectLiteralValue(cwd, node, sourceFile, imports, sourceDir);
   }
   if (ts.isIdentifier(node)) {
     // Check if it's an imported value
     const importInfo = imports.get(node.text);
     if (importInfo) {
-      return createDynamicImport(importInfo, sourceDir);
+      return createDynamicImport(cwd, importInfo, sourceDir);
     }
     // If it's a local variable, try to resolve its value
     const varDeclaration = sourceFile.statements.find(
@@ -158,6 +162,7 @@ function extractValue(
 
       if (declaration && declaration.initializer) {
         return evaluateExpression(
+          cwd,
           declaration.initializer,
           sourceFile,
           imports,
@@ -173,6 +178,7 @@ function extractValue(
     let result = node.head.text;
     node.templateSpans.forEach((span) => {
       const spanValue = evaluateExpression(
+        cwd,
         span.expression,
         sourceFile,
         imports,
@@ -185,7 +191,13 @@ function extractValue(
   }
   // Handle type assertions
   if (ts.isAsExpression(node)) {
-    return evaluateExpression(node.expression, sourceFile, imports, sourceDir);
+    return evaluateExpression(
+      cwd,
+      node.expression,
+      sourceFile,
+      imports,
+      sourceDir,
+    );
   }
   // Handle function calls (like IIFE) - currently not supported for evaluation
   if (ts.isCallExpression(node)) {
@@ -196,8 +208,15 @@ function extractValue(
     ts.isBinaryExpression(node) &&
     node.operatorToken.kind === ts.SyntaxKind.PlusToken
   ) {
-    const left = evaluateExpression(node.left, sourceFile, imports, sourceDir);
+    const left = evaluateExpression(
+      cwd,
+      node.left,
+      sourceFile,
+      imports,
+      sourceDir,
+    );
     const right = evaluateExpression(
+      cwd,
       node.right,
       sourceFile,
       imports,
@@ -213,15 +232,17 @@ function extractValue(
 }
 
 function evaluateExpression(
+  cwd: string,
   node: ts.Node,
   sourceFile: ts.SourceFile,
   imports: Map<string, ImportedModule>,
   sourceDir: string,
 ): any {
-  return extractValue(node, sourceFile, imports, sourceDir);
+  return extractValue(cwd, node, sourceFile, imports, sourceDir);
 }
 
 export async function parseTypeScriptFileForExportedMetadata(
+  cwd: string,
   filePath: string,
   exportName: string,
 ): Promise<Record<string, any> | undefined> {
@@ -250,6 +271,7 @@ export async function parseTypeScriptFileForExportedMetadata(
         // Handle export assignment (export default ...)
         if (ts.isExportAssignment(node)) {
           const exportedValue = evaluateExpression(
+            cwd,
             node.expression,
             sourceFile,
             imports,
@@ -275,6 +297,7 @@ export async function parseTypeScriptFileForExportedMetadata(
             declaration.initializer // Removed ts.isObjectLiteralExpression check
           ) {
             metadata = evaluateExpression(
+              cwd,
               declaration.initializer,
               sourceFile,
               imports,
