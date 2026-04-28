@@ -1,3 +1,10 @@
+## [6.2.4](https://github.com/asaidimu/vite-autoload/compare/v6.2.3...v6.2.4) (2026-04-28)
+
+
+### Bug Fixes
+
+* **core:** streamline plugin architecture and remove legacy UI example ([22e3e62](https://github.com/asaidimu/vite-autoload/commit/22e3e627db163f9a46445b0fd3ab57d5570bab11))
+
 ## [6.2.3](https://github.com/asaidimu/vite-autoload/compare/v6.2.2...v6.2.3) (2025-07-03)
 
 
