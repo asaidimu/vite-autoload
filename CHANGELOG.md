@@ -1,3 +1,10 @@
+## [6.2.5](https://github.com/asaidimu/vite-autoload/compare/v6.2.4...v6.2.5) (2026-04-28)
+
+
+### Bug Fixes
+
+* patch push ([f3d6d37](https://github.com/asaidimu/vite-autoload/commit/f3d6d374a20052941ca4c169338af66b4758c4a6))
+
 ## [6.2.4](https://github.com/asaidimu/vite-autoload/compare/v6.2.3...v6.2.4) (2026-04-28)
 
 
