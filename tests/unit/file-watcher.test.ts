@@ -4,7 +4,6 @@ import type { Logger } from '../../src/utils/logger';
 import { PluginOptions } from '../../src/types/plugin';
 import * as chokidar from 'chokidar';
 import * as debounceModule from '../../src/utils/debounce';
-import path from 'path';
 
 describe('createFileWatcher', () => {
   const mockLogger: Logger = {
@@ -84,7 +83,7 @@ describe('createFileWatcher', () => {
     const addCallback = mockWatcher.on.mock.calls.find((call: any) => call[0] === 'add')[1];
     await addCallback('/test/dir/file.ts');
 
-    expect(mockOnChange).toHaveBeenCalledWith(['/test/dir/file.ts']);
+    expect(mockOnChange).toHaveBeenCalledWith("add", '/test/dir/file.ts');
   });
 
   it('should call onChange when a file is changed', async () => {
@@ -109,7 +108,7 @@ describe('createFileWatcher', () => {
     const changeCallback = mockWatcher.on.mock.calls.find((call: any) => call[0] === 'change')[1];
     await changeCallback('/test/dir/file.ts');
 
-    expect(mockOnChange).toHaveBeenCalledWith(['/test/dir/file.ts']);
+    expect(mockOnChange).toHaveBeenCalledWith("change", '/test/dir/file.ts');
   });
 
   it('should call onChange when a file is unlinked', async () => {
@@ -134,8 +133,8 @@ describe('createFileWatcher', () => {
     const unlinkCallback = mockWatcher.on.mock.calls.find((call: any) => call[0] === 'unlink')[1];
     await unlinkCallback('/test/dir/file.ts');
 
-    expect(mockOnChange).toHaveBeenCalledWith(['/test/dir/file.ts']);
+    expect(mockOnChange).toHaveBeenCalledWith("unlink", '/test/dir/file.ts');
   });
 
-  
+
 });

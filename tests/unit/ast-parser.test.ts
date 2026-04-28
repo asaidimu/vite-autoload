@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parseTypeScriptFileForExportedMetadata } from '../../src/utils/ast-parser';
 
+const root = process.cwd()
 describe('parseTypeScriptFileForExportedMetadata', () => {
   const mockFilePath = '/test/path/to/file.ts';
   const mockSourceDir = '/test/path/to';
@@ -22,6 +23,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
       `export const someOtherVar = 1;`,
     );
     const result = await parseTypeScriptFileForExportedMetadata(
+            root,
       mockFilePath,
       'metadata',
     );
@@ -32,7 +34,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
     vi.spyOn(fs.promises, 'readFile').mockResolvedValueOnce(
       `export const metadata = { title: 'Test Title', description: 'Test Description' };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -46,7 +48,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
     vi.spyOn(fs.promises, 'readFile').mockResolvedValueOnce(
       `export default { title: 'Default Title' };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'default',
     );
@@ -63,7 +65,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
         }
       };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -78,7 +80,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
     vi.spyOn(fs.promises, 'readFile').mockResolvedValueOnce(
       `export const metadata = { isActive: true, count: 123 };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -93,7 +95,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
       `import { someComponent } from './components/someComponent';
        export const metadata = { component: someComponent };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -105,7 +107,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
       `import someDefaultComponent from './components/defaultComponent';
        export const metadata = { component: someDefaultComponent };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -116,7 +118,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
     vi.spyOn(fs.promises, 'readFile').mockResolvedValueOnce(
       "const name = 'World';\n       export const metadata = { greeting: 'Hello ' + name + '!' };", // Use string concatenation
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -130,7 +132,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
       `const myValue = 'abc';
        export const metadata = { key: myValue };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );
@@ -141,7 +143,7 @@ describe('parseTypeScriptFileForExportedMetadata', () => {
     vi.spyOn(fs.promises, 'readFile').mockResolvedValueOnce(
       `export const metadata = { value: 'test' as string };`,
     );
-    const result = await parseTypeScriptFileForExportedMetadata(
+    const result = await parseTypeScriptFileForExportedMetadata(root,
       mockFilePath,
       'metadata',
     );

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import * as metadataUtils from '../../src/utils/metadata';
 import * as astParser from '../../src/utils/ast-parser';
 
+const root = process.cwd()
+
 describe('createMetadataExtractor', () => {
   const mockFilePath = '/test/path/to/file.ts';
   const mockSchema = z.object({
@@ -28,7 +30,7 @@ describe('createMetadataExtractor', () => {
       isActive: true,
     });
 
-    const extractor = metadataUtils.createMetadataExtractor(mockSchema, { exportName: 'metadata' });
+    const extractor = metadataUtils.createMetadataExtractor(root, mockSchema, { exportName: 'metadata' });
     const result = await extractor.extract(mockFilePath);
 
     expect(result).toEqual({
@@ -36,7 +38,7 @@ describe('createMetadataExtractor', () => {
       version: 1,
       isActive: true,
     });
-    expect(parseSpy).toHaveBeenCalledWith(mockFilePath, 'metadata');
+    expect(parseSpy).toHaveBeenCalledWith(root, mockFilePath, 'metadata');
   });
 
   it('should apply default values from schema if not present in extracted data', async () => {
@@ -45,7 +47,7 @@ describe('createMetadataExtractor', () => {
       version: 2,
     });
 
-    const extractor = metadataUtils.createMetadataExtractor(mockSchema, { exportName: 'metadata' });
+    const extractor = metadataUtils.createMetadataExtractor(root, mockSchema, { exportName: 'metadata' });
     const result = await extractor.extract(mockFilePath);
 
     expect(result).toEqual({
@@ -58,7 +60,7 @@ describe('createMetadataExtractor', () => {
   it('should throw an error if no metadata is found by ast-parser', async () => {
     parseSpy.mockResolvedValueOnce(undefined);
 
-    const extractor = metadataUtils.createMetadataExtractor(mockSchema, { exportName: 'metadata' });
+    const extractor = metadataUtils.createMetadataExtractor(root, mockSchema, { exportName: 'metadata' });
 
     await expect(extractor.extract(mockFilePath)).rejects.toThrowError(
       'No metadata found in /test/path/to/file.ts at metadata',
@@ -70,7 +72,7 @@ describe('createMetadataExtractor', () => {
       title: 123, // Invalid type
     });
 
-    const extractor = metadataUtils.createMetadataExtractor(mockSchema, { exportName: 'metadata' });
+    const extractor = metadataUtils.createMetadataExtractor(root, mockSchema, { exportName: 'metadata' });
     await expect(extractor.extract(mockFilePath)).rejects.toThrowError(
       `Invalid metadata in /test/path/to/file.ts:
 title: Expected string, received number`,
@@ -89,7 +91,7 @@ title: Expected string, received number`,
       component: z.any(), // Use z.any() for dynamic import functions
     });
 
-    const extractor = metadataUtils.createMetadataExtractor(schemaWithDynamicImport, { exportName: 'metadata' });
+    const extractor = metadataUtils.createMetadataExtractor(root, schemaWithDynamicImport, { exportName: 'metadata' });
     const result = await extractor.extract(mockFilePath);
 
     expect(result?.component).toBeInstanceOf(Function);
@@ -125,7 +127,7 @@ describe('extract (utility function)', () => {
 
     const result = await metadataUtils.extract({ filePath: mockFilePath, schema: mockSchema, name: 'testName' });
 
-    expect(createExtractorSpy).toHaveBeenCalledWith(mockSchema, { exportName: 'testName' });
+    expect(createExtractorSpy).toHaveBeenCalledWith(root, mockSchema, { exportName: 'testName' });
     expect(mockExtractor.extract).toHaveBeenCalledWith(mockFilePath);
     expect(result).toEqual({ name: 'Test' });
   });

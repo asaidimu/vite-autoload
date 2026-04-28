@@ -2,6 +2,18 @@
   "name": "@asaidimu/vite-autoload",
   "version": "1.0.0",
   "author": "Saidimu <47994458+asaidimu@users.noreply.github.com>",
+  "scripts": {
+    "ci": "bun install",
+    "dev": "vite",
+    "dev:ui": "vite dev",
+    "clean": "[ -e ./dist ] && rm -rf ./dist || echo No dist",
+    "prebuild": "bun clean && bun run .sync-package.ts",
+    "build": "tsc",
+    "test": "bun test",
+    "postbuild": "cp README.md LICENSE.md ./dist && cp ./dist.package.json ./dist/package.json && cp ./example.config.ts ./dist"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/asaidimu/vite-autoload.git"
@@ -70,17 +82,5 @@
         }
       ]
     ]
-  },
-  "scripts": {
-    "ci": "bun install",
-    "dev": "vite",
-    "dev:ui": "vite dev",
-    "clean": "[ -e ./dist ] && rm -rf ./dist || echo No dist",
-    "prebuild": "bun clean && bun run .sync-package.ts",
-    "build": "tsc",
-    "test": "bun test",
-    "postbuild": "cp README.md LICENSE.md ./dist && cp ./dist.package.json ./dist/package.json && cp ./example.config.ts ./dist"
-  },
-  "type": "module",
-  "types": "dist/index.d.ts"
+  }
 }

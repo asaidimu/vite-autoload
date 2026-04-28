@@ -50,7 +50,6 @@ export function updateDependencyMappings(
         }
       });
     }
-    virtualModuleDeps.set(virtualModule, deps);
     logger.debug(
       `Finished mapping entries for virtual module: ${virtualModule}. Total dependencies: ${deps.size}`,
     );
@@ -73,7 +72,6 @@ export function updateDependencyMappings(
 
   logger.debug(
     "Finished updating dependency mappings. Total virtual modules with dependencies:",
-    Array.from(virtualModuleDeps.keys()),
   );
 }
 
@@ -92,7 +90,7 @@ export function establishDirectDependencies(
   virtualModuleIds: string[],
 ) {
   const { logger } = config;
-  const { server, importerToVirtualDeps } = runtime;
+  const { server, } = runtime;
 
   if (!server) {
     logger.warn(
@@ -102,7 +100,7 @@ export function establishDirectDependencies(
   }
 
   logger.debug(`Establishing direct dependencies for importer: ${importerId}`);
-
+/*
   if (!importerToVirtualDeps.has(importerId)) {
     importerToVirtualDeps.set(importerId, new Set());
     logger.debug(`Created new dependency set for importer: ${importerId}`);
@@ -119,5 +117,5 @@ export function establishDirectDependencies(
   logger.debug(
     `Finished establishing dependencies for ${importerId}. Total virtual modules: ${importerVirtualDeps.size}`,
     Array.from(importerVirtualDeps),
-  );
+  ); */
 }
