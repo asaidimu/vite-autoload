@@ -4,6 +4,7 @@
   "description": "Autoloader for vite",
   "main": "index.js",
   "types": "index.d.ts",
+  "type": "module",
   "files": [
     "./*"
   ],
