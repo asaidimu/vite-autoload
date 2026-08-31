@@ -1,3 +1,13 @@
+# [7.0.0](https://github.com/asaidimu/vite-autoload/compare/v6.2.7...v7.0.0) (2026-08-31)
+
+
+* refactor(plugin)!: migrate from virtual modules to disk-based generation ([539f5b8](https://github.com/asaidimu/vite-autoload/commit/539f5b8feae2dfcbd52cb500e5559b044c10fb5b))
+
+
+### BREAKING CHANGES
+
+* The plugin no longer exposes generated assets via virtual modules (virtual:...). Instead, it now writes generated files directly to disk (defaulting to src/generated). Applications must import these files from the filesystem. The configuration option 'outputDir' can be used to customize the destination.
+
 ## [6.2.7](https://github.com/asaidimu/vite-autoload/compare/v6.2.6...v6.2.7) (2026-04-28)
 
 
