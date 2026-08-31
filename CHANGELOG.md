@@ -1,3 +1,13 @@
+# [8.0.0](https://github.com/asaidimu/vite-autoload/compare/v7.0.0...v8.0.0) (2026-08-31)
+
+
+* feat(plugin)!: implement hybrid production build with virtual modules ([1edf4b1](https://github.com/asaidimu/vite-autoload/commit/1edf4b1f5b225003adedd165076f9e106a2fb4db))
+
+
+### BREAKING CHANGES
+
+* The plugin no longer writes generated files to disk in production mode by default. Projects relying on static file imports from the build output directory may need to define an alias in the plugin configuration to resolve generated modules correctly.
+
 # [7.0.0](https://github.com/asaidimu/vite-autoload/compare/v6.2.7...v7.0.0) (2026-08-31)
 
 
