@@ -52,29 +52,49 @@ export function createFileWatcher(
       )
     : null;
 
+  // Get the output directory to ignore it
+  const outputDir = path.resolve(
+    options.settings.rootDir || process.cwd(),
+    options.settings.outputDir || "src/generated",
+  );
+
   if (typesFile) {
     logger.debug(`Ignoring types file: ${typesFile}`);
   }
+  logger.debug(`Ignoring output directory: ${outputDir}`);
 
   // Increase debounce time and add queue handling
   let isProcessing = false;
-  const debouncedOnChange = debounce(async (type: FileChangeType, changedFile: string) => {
-    if (isProcessing) {
-      logger.debug(
-        "File watcher: debouncedOnChange skipped, already processing.",
-      );
-      return;
-    }
+  let pendingChange: { type: FileChangeType; file: string } | null = null;
 
-    logger.debug("File watcher: debouncedOnChange triggered.");
+  const processChange = async (type: FileChangeType, changedFile: string) => {
+    logger.debug("File watcher: processing change.");
     try {
       isProcessing = true;
       await onChange(type, changedFile);
       logger.debug("File watcher: onChange callback executed.");
     } finally {
       isProcessing = false;
-      logger.debug("File watcher: debouncedOnChange finished processing.");
+      // Process any change that arrived while we were busy
+      if (pendingChange) {
+        const next = pendingChange;
+        pendingChange = null;
+        debouncedOnChange(next.type, next.file);
+      }
+      logger.debug("File watcher: finished processing.");
     }
+  };
+
+  const debouncedOnChange = debounce((type: FileChangeType, changedFile: string) => {
+    if (isProcessing) {
+      logger.debug(
+        "File watcher: already processing, queueing change.",
+      );
+      pendingChange = { type, file: changedFile };
+      return;
+    }
+
+    processChange(type, changedFile);
   }, options.settings.watch?.debounceTime || 1000);
 
   function start(): void {
@@ -103,6 +123,8 @@ export function createFileWatcher(
           "**/node_modules/**",
           // Ignore the types file to prevent endless renders
           typesFile ? path.relative(process.cwd(), typesFile) : null,
+          // Ignore generated output directory
+          path.relative(process.cwd(), outputDir) + "/**",
         ].filter(Boolean) as any,
       });
 

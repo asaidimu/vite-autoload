@@ -4,6 +4,7 @@ import { PluginConfig, PluginRuntime } from '../../src/plugin/types';
 import { ModuleGenerator } from '../../src/generators/generator';
 import { ViteAdapter } from '../../src/plugin/vite-adapter';
 import * as utils from '../../src/plugin/utils';
+import * as diskWriter from '../../src/utils/disk-writer';
 import type { Logger } from '../../src/utils/logger';
 
 describe('build.ts', () => {
@@ -56,6 +57,7 @@ describe('build.ts', () => {
     vi.spyOn(utils, 'regenerateTypes').mockResolvedValue(undefined);
     vi.spyOn(utils, 'emitManifest').mockResolvedValue(undefined);
     vi.spyOn(utils, 'emitSitemap').mockResolvedValue(undefined);
+    vi.spyOn(diskWriter, 'generateToDisk').mockResolvedValue(['mockGroup']);
   });
 
   afterEach(() => {
@@ -65,46 +67,31 @@ describe('build.ts', () => {
   describe('runBuildStart', () => {
     it('should skip tasks if not in production mode', async () => {
       const config = { ...mockPluginConfig, resolvedConfig: { ...mockPluginConfig.resolvedConfig, isProduction: false } };
-      await runBuildStart(mockViteAdapter, config, mockPluginRuntime, [mockModuleGenerator]);
+      await runBuildStart(mockViteAdapter, config, [mockModuleGenerator]);
       expect(mockLogger.debug).toHaveBeenCalledWith('Skipping build start tasks: not in production mode.');
       expect(utils.regenerateTypes).not.toHaveBeenCalled();
-      expect(mockViteAdapter.emitFile).not.toHaveBeenCalled();
     });
 
-    it('should regenerate types and emit chunks in production mode', async () => {
-      mockModuleGenerator.modules.mockResolvedValueOnce(
-                [
-        { file: '/src/module1.ts', uri: '/module1.js' },
-        { file: '/src/module2.ts', uri: '/module2.js' },
-      ]);
-
+    it('should regenerate types in production mode', async () => {
       await runBuildStart(mockViteAdapter, mockPluginConfig, [mockModuleGenerator]);
 
       expect(mockLogger.info).toHaveBeenCalledWith('Running build start tasks...');
       expect(utils.regenerateTypes).toHaveBeenCalledWith(mockPluginConfig, [mockModuleGenerator]);
-      expect(mockModuleGenerator.modules).toHaveBeenCalledWith({ production: true });
-      expect(mockViteAdapter.emitFile).toHaveBeenCalledTimes(2);
-      expect(mockViteAdapter.emitFile).toHaveBeenCalledWith({
-        type: 'chunk',
-        id: '/src/module1.ts',
-        preserveSignature: 'exports-only',
-        fileName: 'module1.js',
-      });
-      expect(mockViteAdapter.emitFile).toHaveBeenCalledWith({
-        type: 'chunk',
-        id: '/src/module2.ts',
-        preserveSignature: 'exports-only',
-        fileName: 'module2.js',
-      });
       expect(mockLogger.info).toHaveBeenCalledWith('Build start tasks completed.');
     });
   });
 
   describe('runCloseBundle', () => {
-    it('should emit manifest and sitemap', async () => {
+    it('should write generated modules, emit manifest and sitemap', async () => {
       await runCloseBundle(mockViteAdapter, mockPluginConfig, mockPluginRuntime, [mockModuleGenerator]);
 
       expect(mockLogger.info).toHaveBeenCalledWith('Running close bundle tasks...');
+      expect(diskWriter.generateToDisk).toHaveBeenCalledWith(
+        'dist/generated',
+        [mockModuleGenerator],
+        { production: true },
+        mockLogger,
+      );
       expect(utils.emitManifest).toHaveBeenCalledWith(mockPluginConfig);
       expect(utils.emitSitemap).toHaveBeenCalledWith(mockViteAdapter, mockPluginConfig, [mockModuleGenerator]);
       expect(mockLogger.info).toHaveBeenCalledWith('Close bundle tasks completed.');

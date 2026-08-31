@@ -21,7 +21,7 @@ export default function createAutoloadConfig({
     description: "Transforms UI view files into routable data.",
     input: {
       directory: "ui",
-      match: ["*.ts"],
+      match: ["**/*.ts"],
       ignore: ["*.d.ts"],
     },
     output: {},
@@ -76,8 +76,9 @@ export default function createAutoloadConfig({
   return {
     settings: {
       rootDir: process.cwd(),
+      outputDir: "src/generated", // Generated modules are written here
       export: {
-        types: "ui/autogen.d.ts",
+        types: "src/generated/autogen.d.ts",
       },
       sitemap: {
         output: "sitemap.xml",

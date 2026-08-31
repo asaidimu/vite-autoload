@@ -33,7 +33,7 @@ export interface CodeGenerator {
  * @param logger - The logger instance.
  * @returns The generated code snippet.
  */
-function generateModuleCode(
+export function generateModuleCode(
   moduleKey: string,
   moduleData: any,
   moduleConfig: TransformConfig<any, any, any> | undefined,
@@ -59,7 +59,7 @@ function generateModuleCode(
  * @param logger The logger instance.
  * @returns The generated default export statement.
  */
-function generateDefaultExport(moduleKeys: string[], logger?: Logger): string {
+export function generateDefaultExport(moduleKeys: string[], logger?: Logger): string {
   logger?.debug(
     `Generating default export for modules: ${moduleKeys.join(", ")}`,
   );

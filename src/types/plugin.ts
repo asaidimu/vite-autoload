@@ -49,6 +49,12 @@ export interface PluginOptions {
      * Log level for controlling verbosity of output.
      */
     logLevel?: LogLevel;
+    /**
+     * Directory where generated modules are written to disk.
+     * During dev, Vite watches this directory for native HMR.
+     * @default "src/generated"
+     */
+    outputDir?: string;
   };
   /**
    * Configuration for defining and transforming various modules or collections of data.

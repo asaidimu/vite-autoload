@@ -40,7 +40,7 @@ This plugin streamlines development workflows by:
 
 - **Eliminating Manual Imports and Boilerplate**: Automates the often tedious and error-prone process of defining and updating imports for routes, components, and other modules. This significantly reduces repetitive coding, allowing developers to focus on core application logic.
 - **Enhancing Developer Productivity**: By automating asset management, it accelerates development cycles and iteration speeds, leading to a more efficient and productive coding experience.
-- **Ensuring Type Safety for Dynamic Assets**: Automatically generates TypeScript declaration files (`.d.ts`) for all virtual modules. This provides robust type safety for dynamically loaded assets, improving code reliability and developer experience by catching potential errors at compile time.
+- **Ensuring Type Safety for Dynamic Assets**: Automatically generates TypeScript declaration files (`.d.ts`) for all generated modules. This provides robust type safety for dynamically loaded assets, improving code reliability and developer experience by catching potential errors at compile time.
 - **Improving Project Maintainability**: As applications scale, manually maintaining large routing tables or component registries becomes challenging. The plugin's automatic generation capabilities ensure consistency and reduce long-term maintenance overhead by keeping configurations synchronized with your source files.
 - **Simplifying SEO and PWA Integration**: Integrates the generation of essential web artifacts like `sitemap.xml` for search engine optimization and `manifest.webmanifest` for Progressive Web App (PWA) capabilities directly into the build pipeline, simplifying crucial setup steps.
 - **Enabling Metadata-Driven Development**: Provides a robust utility for extracting structured metadata from your source files using TypeScript AST analysis and Zod schema validation. This allows for dynamic UI rendering, routing, and application logic based on declarative metadata embedded directly in your code.
@@ -48,7 +48,7 @@ This plugin streamlines development workflows by:
 By providing these capabilities, `@asaidimu/vite-autoload` facilitates more efficient development paradigms, such as:
 
 - **File-System Driven Routing and Component Discovery**: Leverage your existing file and directory structure to automatically define routes or expose component collections, creating a natural and intuitive organization for your application.
-- **Automated Data Layer Generation**: Transform file-based content (e.g., Markdown for blog posts) or programmatic data into type-safe virtual modules, providing a unified and easily consumable data layer for your application.
+- **Automated Data Layer Generation**: Transform file-based content (e.g., Markdown for blog posts) or programmatic data into type-safe generated modules, providing a unified and easily consumable data layer for your application.
 - **Integrated Build Artifacts**: Ensure that critical SEO and PWA files are always up-to-date and correctly generated as part of your standard build process, without requiring separate tooling or manual updates.
 
 This plugin is designed to be a fundamental tool for developers building scalable and maintainable applications with Vite, providing a robust foundation for automated asset management.
@@ -61,13 +61,14 @@ We highly encourage feedback and contributions, but please be prepared for a rap
 ### Key Features
 
 - 🚀 **Automatic Route & Module Generation**: Dynamically discover and expose application routes (e.g., pages) and other reusable modules (e.g., components, hooks) from specified directories based on flexible glob patterns, or from custom data sources. This means **less manual import management and more focus on your code's core logic.**
-- 📦 **Virtual Modules**: All processed data is exposed as Vite virtual modules (e.g., `virtual:views`, `virtual:components`), allowing direct and type-safe import into your application code, **reducing boilerplate and enhancing code clarity.**
-- 🔄 **Hot Module Replacement (HMR)**: Provides seamless HMR for changes in watched files. When files tracked by the plugin are added, modified, or removed, virtual modules and their importers are intelligently invalidated to ensure a **fast, efficient, and uninterrupted development experience.**
+- 📦 **Disk-Based Generated Modules**: All processed data is written as real `.ts` files to a configurable output directory (default: `src/generated/`), allowing direct and type-safe imports into your application code. **No virtual module magic — just standard file imports.**
+- 🔄 **Hot Module Replacement (HMR)**: Provides seamless HMR for changes in watched files. When files tracked by the plugin are added, modified, or removed, the generated disk files are updated and Vite's native file watcher triggers HMR automatically — **no custom invalidation logic needed.**
 - 🗺️ **Sitemap Generation**: Automatically generates a `sitemap.xml` during the build process, configured with your base URL and exclusion patterns, to **enhance SEO and improve discoverability of your application.**
 - 🌐 **PWA Manifest Generation**: Integrates with Vite's build pipeline to generate a `manifest.webmanifest` file, **enabling your application to function as a Progressive Web App (PWA)** with configurable icons, display modes, and more, all with minimal effort.
-- 📄 **Type Definition Generation**: Automatically generates TypeScript declaration files (`.d.ts`) for your generated modules. This **ensures strong type safety and significantly improves developer experience** when consuming the virtual modules, leading to fewer runtime errors.
-- 🔑 **Metadata Extraction**: A powerful feature that allows extracting structured metadata directly from your source files (e.g., page titles, authentication requirements) using TypeScript AST analysis and validation against Zod schemas. This metadata can then be included in the generated virtual modules, **empowering dynamic content and routing decisions.**
+- 📄 **Type Definition Generation**: Automatically generates TypeScript declaration files (`.d.ts`) alongside your generated modules. This **ensures strong type safety and significantly improves developer experience** when consuming the generated modules, leading to fewer runtime errors.
+- 🔑 **Metadata Extraction**: A powerful feature that allows extracting structured metadata directly from your source files (e.g., page titles, authentication requirements) using TypeScript AST analysis and validation against Zod schemas. This metadata can then be included in the generated modules, **empowering dynamic content and routing decisions.**
 - 🛠️ **Highly Configurable**: Offers extensive options for defining file matching rules, transforming discovered file or data, customizing output formats, and fine-tuning build-time and development-time behaviors. The plugin introduces a unified `components` model for defining module groups, replacing previous `routes` and `modules` root properties, offering **unparalleled flexibility to adapt to your project's unique needs.**
+- 🔧 **Deterministic Build Output**: Generated modules are written to `dist/generated/` after build with stable filenames, enabling server-side module swapping and predictable import paths.
 
 ---
 
@@ -148,7 +149,7 @@ export default function createAutoloadConfig({
 }: ConfigOptions): PluginOptions {
   // Example demonstrating file-system driven routing with metadata extraction
   const viewsTransformConfig: TransformConfig<ResolvedFile, any, any> = {
-    name: "views", // This name will be used for the virtual module: `virtual:views`
+    name: "views", // This name will be used for the generated file: `src/generated/views.ts`
     description: "Transforms UI view files into routable data.",
     input: {
       directory: "ui", // Base directory to scan, e.g., `src/ui/pages`
@@ -157,7 +158,7 @@ export default function createAutoloadConfig({
       prefix: "/_views/", // Optional: prefix for URIs in the generated output, useful for lazy loading
     },
     output: {
-      // Defines the structure of the virtual module, e.g., `export const views = [{ route: '/', ... }, ...];`
+      // Defines the structure of the generated module, e.g., `export const views = [{ route: '/', ... }, ...];`
       template: "export const views = {{ data }};",
       // Generates a TypeScript type like `type ViewKeys = '/home' | '/about';` for type-safe route keys.
       types: { name: "ViewKeys", property: "route" },
@@ -203,7 +204,7 @@ export default function createAutoloadConfig({
 
   // Example demonstrating "Automated Data Layer Generation" from a programmatic source.
   const dataTransformConfig: TransformConfig<Array<number>, any, any> = {
-    name: "data", // This will be exposed as `virtual:data`
+    name: "data", // This will be exposed as `src/generated/data.ts`
     description: "Generates arbitrary numeric data from a programmatic source.",
     // The `input` function can fetch data from an API, database, or generate it on the fly.
     input: () =>
@@ -239,9 +240,10 @@ export default function createAutoloadConfig({
   return {
     settings: {
       rootDir: process.cwd(), // Base directory for resolving relative paths in plugin options
+      outputDir: "src/generated", // Directory where generated modules are written to disk
       export: {
         // "Type Definition Generation": Specifies the output path for the auto-generated TypeScript types.
-        types: "src/app/config/autogen.d.ts",
+        types: "src/generated/autogen.d.ts",
         routeLimit: 1000, // Limits the number of entries in generated union types, preventing excessively large types.
       },
       // "Sitemap Generation": Comprehensive configuration for the `sitemap.xml` file.
@@ -298,28 +300,31 @@ After configuring the plugin, run your Vite development server:
 bun run dev
 ```
 
-You should see log messages prefixed with `[vite-autoload]` in your console, indicating that the file watcher has started and modules/types are being generated. Check for any errors or warnings. During a production build (`bun run build`), the plugin will generate `sitemap.xml` and `manifest.webmanifest` in your output directory. You should also find your `autogen.d.ts` file generated at the configured path, containing types like:
+You should see log messages prefixed with `[vite-autoload]` in your console, indicating that the file watcher has started and modules/types are being generated. Check for any errors or warnings. Generated modules are written to the `outputDir` directory (default: `src/generated/`). During a production build (`bun run build`), the plugin will also write generated modules to `dist/generated/` with deterministic filenames, along with `sitemap.xml` and `manifest.webmanifest`. You should also find your `autogen.d.ts` file generated at the configured path, containing types like:
 
 ```typescript
-// src/app/config/autogen.d.ts (example content)
-declare module "virtual:views" {
-  export const views: Array<{
-    route: ViewKeys;
-    path: string;
-    metadata: {
-      title: string;
-      description?: string;
-      authRequired?: boolean;
-    };
-  }>;
-}
+// src/generated/autogen.d.ts (example content)
+export type ViewKeys = "/" | "/home" | "/about" | "/products/[id]" | "/blog/post";
+export type AppRouteData = ViewKeys;
+```
 
-declare module "virtual:data" {
-  export const data: Array<number>;
-}
+The generated module files look like:
 
-type ViewKeys = "/" | "/home" | "/about" | "/products/[id]" | "/blog/post"; // Example union type
-type AppRouteData = ViewKeys; // Example based on `strategy.types.name` for 'routes' component
+```typescript
+// src/generated/views.ts (example content)
+export const views = [
+  {
+    route: '/dashboard',
+    path: '/_views/dashboard.js',
+    metadata: { title: 'Dashboard', authRequired: true }
+  },
+  {
+    route: '/settings',
+    path: '/_views/settings.js',
+    metadata: { title: 'User Settings' }
+  }
+];
+export default views;
 ```
 
 ---
@@ -328,7 +333,7 @@ type AppRouteData = ViewKeys; // Example based on `strategy.types.name` for 'rou
 
 ### Integrating with Vite
 
-The `createAutoloadPlugin` function is the main entry point to integrate the plugin into your Vite configuration. It accepts a `PluginOptions` object that dictates how files are matched, transformed, and exposed as virtual modules.
+The `createAutoloadPlugin` function is the main entry point to integrate the plugin into your Vite configuration. It accepts a `PluginOptions` object that dictates how files are matched, transformed, and written to disk as generated modules.
 
 ```typescript
 // vite.config.ts
@@ -349,6 +354,7 @@ The `PluginOptions` object, which defines the comprehensive configuration for th
 interface PluginOptions {
   settings: {
     rootDir?: string;
+    outputDir?: string; // Directory for generated modules (default: "src/generated")
     export?: {
       types?: string;
       routeLimit?: number;
@@ -405,10 +411,12 @@ A top-level object containing global configurations for the plugin.
 
 - `rootDir`: `string` (Optional, Default: `process.cwd()`)
   The base directory from which all relative paths (e.g., for `export.types`) are resolved.
+- `outputDir`: `string` (Optional, Default: `'src/generated'`)
+  The directory where generated module files are written to disk (relative to `rootDir`). During development, Vite watches this directory for native HMR. During production builds, generated modules are written to `{build.outDir}/generated/` with deterministic filenames.
 - `export`: `object` (Optional)
   Configuration for generating supplementary output files like TypeScript types, directly supporting the **"Type Definition Generation"** feature.
   - `types`: `string` (Optional)
-    The file path (relative to `rootDir`) where the TypeScript declaration file (`.d.ts`) should be generated (e.g., `'src/app/config/autogen.d.ts'`). This file will contain union types for module keys based on your configuration, ensuring type safety when consuming virtual modules.
+    The file path (relative to `rootDir`) where the TypeScript declaration file (`.d.ts`) should be generated (e.g., `'src/generated/autogen.d.ts'`). This file will contain union types for module keys based on your configuration, ensuring type safety when consuming generated modules.
   - `routeLimit`: `number` (Optional, Default: `1000`)
     Limits the number of entries (e.g., routes) included in a generated TypeScript union type. Useful for very large projects to prevent excessively large type declarations that could impact editor performance.
 - `sitemap`: `SitemapConfig` (Optional)
@@ -467,7 +475,7 @@ This is the core of the plugin's configuration. It is an `Array<ComponentConfig>
 - `groups`: `Array<TransformConfig<any, any, any>>` (Required)
   An array of individual transformation configurations (groups) that belong to this component category. Each `TransformConfig` defines how specific input data is transformed and aggregated, directly substantiating the **"Automatic Route & Module Generation"** and **"Automated Data Layer Generation"** claims.
   - `name`: `string` (Required)
-    A unique name for this specific group (e.g., `'views'`, `'pages'`, `'components'`). This name directly corresponds to the virtual module ID (e.g., `virtual:<group-name>`).
+    A unique name for this specific group (e.g., `'views'`, `'pages'`, `'components'`). This name corresponds to the generated file (e.g., `src/generated/<group-name>.ts`).
   - `description`: `string` (Optional)
     An optional description for the transformation pipeline.
   - `metadata`: `Record<string, unknown>` (Optional)
@@ -483,8 +491,8 @@ This is the core of the plugin's configuration. It is an `Array<ComponentConfig>
     - **If `() => Promise<Array<InputData>> | Array<InputData>` (for programmatic data sources):**
       - A function that returns an array of input data directly, allowing for non-file-system based data. This function can be `async` (e.g., fetching data from a headless CMS API at build time).
   - `output`: `object` (Optional)
-    Controls the output format of the virtual module, directly supporting **"Virtual Modules"**.
-    - `template`: `string` - A template string for the generated virtual module code. Use `{{ data }}` as a placeholder for the processed JSON stringified data. Example: `'export const {{ name }} = {{ data }};'`.
+    Controls the output format of the generated module, directly supporting **"Disk-Based Generated Modules"**.
+    - `template`: `string` - A template string for the generated module code. Use `{{ data }}` as a placeholder for the processed JSON stringified data. Example: `'export const {{ name }} = {{ data }};'`.
     - `types`: `object` (Optional) - Configuration for generating TypeScript types specific to this group, further ensuring **"Type Definition Generation"**.
       - `name`: `string` - The name of the TypeScript type to generate (e.g., `'DashboardViewData'`).
       - `property`: `string` - The property name from the transformed `item` (from the `transform` function's return value) to use for constructing the union type.
@@ -497,12 +505,12 @@ This is the core of the plugin's configuration. It is an `Array<ComponentConfig>
 
 ### Consuming Generated Modules
 
-The plugin exposes your configured groups as virtual modules. You can import them directly in your application code using the `virtual:` prefix, followed by the `name` of your group defined in `TransformConfig`. This demonstrates the **"Virtual Modules"** and **"Automated Data Layer Generation"** in action, providing type-safe and direct access to your processed assets.
+The plugin writes your configured groups as real `.ts` files to the `outputDir` directory (default: `src/generated/`). You can import them directly in your application code using standard relative imports. This provides type-safe and direct access to your processed assets with no virtual module magic.
 
 ```typescript
 // For a group named 'views' (configured as above, likely from `src/ui/pages`):
 // The 'views' object will contain the data structure returned by your 'transform' and 'aggregate' functions.
-import { views } from "virtual:views";
+import { views } from "./generated/views";
 
 console.log("Available Views:", views);
 /*
@@ -523,12 +531,15 @@ Example output in your console (after transformation based on your files):
 */
 
 // For a group named 'data' (from the programmatic source example defined in example.config.ts):
-import { data } from "virtual:data";
+import { data } from "./generated/data";
 console.log("Generated Data:", data);
 /*
 Example output:
 [1, 2, 3, ..., 20]
 */
+
+// Or import everything from the barrel export:
+import { views, data } from "./generated";
 
 // Example of dynamically importing a view component based on the generated data:
 // (Requires a routing library like React Router, Vue Router, etc.)
@@ -558,13 +569,14 @@ async function loadViewComponent(routePath: ViewKeys) {
 
 ### Core Components
 
-- **`createAutoloadPlugin`**: The central orchestrator of the plugin. It initializes collection generators, sets up the file watcher, registers Vite hooks, and coordinates the generation of sitemaps and PWA manifests. It manages the virtual module lifecycle and Hot Module Replacement (HMR).
-- **`createCollectionGenerator`**: Responsible for discovering files based on `FileMatchConfig` or resolving data from a `DataSource` function. It applies `transform` functions to each item's data, optionally applies `aggregate` functions to the collection, and ultimately prepares the data for code generation for the virtual modules (e.g., `virtual:views`, `virtual:components`). It maintains an internal cache of resolved data.
+- **`createAutoloadPlugin`**: The central orchestrator of the plugin. It initializes collection generators, sets up the file watcher, registers Vite hooks, and coordinates the generation of sitemaps and PWA manifests. It manages writing generated modules to disk and Hot Module Replacement (HMR).
+- **`createCollectionGenerator`**: Responsible for discovering files based on `FileMatchConfig` or resolving data from a `DataSource` function. It applies `transform` functions to each item's data, optionally applies `aggregate` functions to the collection, and ultimately prepares the data for code generation. It maintains an internal cache of resolved data.
 - **`createFileResolver`**: Manages the initial discovery and ongoing tracking of files that match configured glob patterns within specified directories. It efficiently resolves paths and maintains an internal cache of `ResolvedFile` objects.
 - **`createDataResolver`**: Handles the resolution of data from programmatic `DataSource` functions, caching their results.
 - **`createDataProcessor`**: Handles the transformation and aggregation pipeline for the data associated with discovered files or resolved data sources. It applies the `transform` function to individual entries and the `aggregate` function to the collection of transformed data, preparing it for code generation.
-- **`createCodeGenerator`**: Generates the final JavaScript code string that constitutes the virtual module, based on the processed data and an optional output template.
-- **`createFileWatcher`**: Utilizes the `chokidar` library to efficiently monitor specified directories for file additions, changes, and deletions. When changes are detected, it debounces and triggers an update callback within the plugin, leading to regeneration of module data and HMR.
+- **`createCodeGenerator`**: Generates the final JavaScript code string that constitutes the generated module, based on the processed data and an optional output template.
+- **`generateToDisk`**: Writes the generated code for each group as a separate `.ts` file to the configured output directory, along with a barrel `index.ts`. Only writes files when content has changed.
+- **`createFileWatcher`**: Utilizes the `chokidar` library to efficiently monitor specified directories for file additions, changes, and deletions. When changes are detected, it debounces and triggers an update callback that regenerates the affected disk files.
 - **`createMetadataExtractor`**: A sophisticated utility that performs static code analysis on TypeScript files using the `typescript` AST parser. It can extract the values of specific `export const` or `export default` object literals, handling various literal types, array literals, object literals, and even transforming imported modules into dynamic import functions. Extracted data is validated against provided Zod schemas.
 - **`NameIndex`**: A utility for ensuring uniqueness of component and group names within the plugin's configuration, preventing naming conflicts.
 
@@ -573,25 +585,26 @@ async function loadViewComponent(routePath: ViewKeys) {
 1.  **Initialization**:
     - During Vite's `configResolved` hook, the plugin stores the Vite configuration.
     - On `configureServer` (development) or `buildStart` (production), `createAutoloadPlugin` initializes `createCollectionGenerator` instances for all configured `components` and their `groups`. Each generator uses an internal `FileResolver` to perform an initial file scan and `DataResolver` for programmatic data, building its cache of matched files/data.
-    - Internal caches (`fileToExportMap`, `virtualModuleCache`, `importerToVirtualDeps`, `virtualModuleDeps`) are populated based on the initial file/data scan.
 2.  **File Watching & HMR (Development)**:
-    - `createFileWatcher` starts monitoring the directories specified in your `PluginOptions.components[].groups[].input`. This is fundamental for the **"Hot Module Replacement (HMR)"** feature.
-    - When a file within a watched directory is added, changed, or removed, the watcher triggers a debounced callback.
-    - The callback triggers regeneration of data for affected virtual modules within their respective `createCollectionGenerator` instances.
-    - The plugin compares the new data hash with the cached hash for each virtual module. If a change is detected, it invalidates the corresponding virtual module in Vite's module graph.
-    - Crucially, it also uses `es-module-lexer` to find all modules (`importers`) that `import` these virtual modules. These importers are then also invalidated, triggering a fast HMR update in the browser without a full page reload.
-3.  **Virtual Module Loading**:
-    - When application code imports a virtual module (e.g., `import { views } from 'virtual:views';`), Vite's `resolveId` hook routes the request to the plugin.
-    - The `load` hook then uses the relevant `createCollectionGenerator` to produce the JavaScript code string containing the processed data, which Vite serves to the browser, enabling the **"Virtual Modules"** feature.
-4.  **Build Phase**:
-    - During `buildStart`, the plugin tells Vite to emit all source files identified by the `createCollectionGenerator` as separate chunks, allowing for optimal code splitting. It also generates the TypeScript types as part of **"Type Definition Generation"**.
-    - During `closeBundle` (after Vite's main build is complete), `generateManifest` uses `PluginOptions.settings.manifest` to create `manifest.webmanifest`, and `generateSitemap` uses `PluginOptions.settings.sitemap` and the final route data to create `sitemap.xml`. These are emitted as assets, directly enabling **"Sitemap Generation"** and **"PWA Manifest Generation"**.
+    - On dev server start, generated modules are written to the `outputDir` directory as real `.ts` files.
+    - The output directory is registered with Vite's watcher, enabling native HMR when generated files change.
+    - `createFileWatcher` monitors the source directories specified in your `PluginOptions.components[].groups[].input`.
+    - When a source file is added, changed, or removed, the watcher triggers a debounced callback.
+    - The callback updates the generators (add/remove/touch files) and calls `generateToDisk` to rewrite the affected generated files.
+    - Vite detects the changes to the generated `.ts` files and triggers HMR automatically — no custom module graph invalidation needed.
+3.  **Disk File Generation**:
+    - The `generateToDisk` function iterates all generators, resolves data for each group, and writes one `.ts` file per group (e.g., `views.ts`, `data.ts`) plus a barrel `index.ts`.
+    - Each generated file contains the module's data as JSON, a default export, and any custom template content.
+    - Files are only rewritten when content changes, avoiding unnecessary disk I/O.
+4.  **Production Build**:
+    - During `closeBundle`, generated modules are written to `{build.outDir}/generated/` with deterministic filenames.
+    - This provides stable import paths for server-side code that needs to reference generated modules.
 
 ### Extension Points
 
 - **`transform` Function**: This is the primary way to customize the data payload for each discovered file or data item. It allows you to define how a `ResolvedFile` object or `InputData` is processed into the desired structure, enabling custom route generation, metadata enrichment, and more. This function can be asynchronous.
 - **`aggregate` Function**: Provides a powerful hook to combine all transformed items for a given group into a single, aggregated data structure. This is ideal for converting arrays of items into objects/maps keyed by a specific property, optimizing data access in your application. This function can also be asynchronous.
-- **`extract` Function**: A crucial extension point for performing custom static analysis on your source files. By providing an implementation (like the one from `src/utils/metadata.ts`), you can read and validate specific exported metadata from your components or pages, making it available in the generated virtual modules. This function is asynchronous.
+- **`extract` Function**: A crucial extension point for performing custom static analysis on your source files. By providing an implementation (like the one from `src/utils/metadata.ts`), you can read and validate specific exported metadata from your components or pages, making it available in the generated modules. This function is asynchronous.
 
 ---
 
@@ -634,7 +647,7 @@ The `package.json` defines several useful scripts for development and building:
 Currently, explicit unit or integration test files (`.test.ts`, `.spec.ts`) are not present in the provided codebase snapshot. For thorough testing of a plugin like this, you would typically include:
 
 - **Unit Tests**: For utilities (e.g., `debounce`, `hash`, `checkers`, `logger`, `uri`) and smaller components (e.g., `metadata` extractor logic, `sitemap` generation).
-- **Integration Tests**: To verify the plugin's behavior within a Vite environment, ensuring virtual modules load correctly, HMR works, and assets are generated as expected during build.
+  - **Integration Tests**: To verify the plugin's behavior within a Vite environment, ensuring generated modules load correctly, HMR works, and assets are generated as expected during build.
 
 If tests were available, you would typically run them with a command like:
 
@@ -730,9 +743,8 @@ This plugin is designed with performance and developer experience in mind. Here 
     - `debounceTime`: Increase this value if rapid successive file saves lead to multiple, redundant rebuilds or HMR updates.
     - `stabilityThreshold`: Increase this value if you notice that file changes are sometimes processed before the files are fully written to disk, leading to partial or empty content being read.
 3.  **HMR Not Triggering Correctly**:
-    - **Virtual Module Imports**: Ensure that your application's entry points or other modules actually `import` the virtual modules (e.g., `import { views } from 'virtual:views';`). The plugin's HMR mechanism relies on Vite's module graph to track importers.
+    - **Generated Module Imports**: Ensure that your application imports the generated modules from the correct path (e.g., `import { views } from './generated/views';`). Vite watches the generated files and triggers HMR automatically when they change.
     - **`logLevel` Debugging**: Set `logLevel: 'debug'` in your `PluginOptions.settings` to get detailed console output about file changes, module invalidations, and HMR events. This can help you diagnose why HMR might not be triggering as expected.
-    - **Consistent Hashing**: The `getDataHash` function in `src/plugin/utils.ts` uses `JSON.stringify`. For complex data structures, inconsistent key order in stringification might lead to false positives for changes. If you experience unexpected HMR, consider a stable stringify library or a dedicated object hashing library for `getDataHash` if your data structures are highly dynamic.
 4.  **Metadata Extraction Errors**:
     - **Schema Mismatch**: If your `extract` function is failing or returning unexpected results, carefully review the `schema` (Zod type) you are providing. It must accurately match the structure of the metadata object you are attempting to extract from your source files.
     - **Syntax Errors**: Ensure the source files from which you are extracting metadata have valid TypeScript/JavaScript syntax. Parsing errors in the source file can prevent metadata extraction.

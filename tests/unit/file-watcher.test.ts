@@ -52,7 +52,7 @@ describe('createFileWatcher', () => {
         pollInterval: 100,
       },
       usePolling: false,
-      ignored: [/(^|[\\/])\../, '**/*.tmp', '**/*.temp', '**/node_modules/**'],
+      ignored: [/(^|[\\/])\../, '**/*.tmp', '**/*.temp', '**/node_modules/**', 'src/generated/**'],
     });
     expect(mockLogger.info).toHaveBeenCalledWith('File watcher started');
 

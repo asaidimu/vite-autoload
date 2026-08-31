@@ -1,11 +1,13 @@
+import * as path from "path";
 import { PluginConfig, PluginRuntime } from "./types";
 import { emitSitemap, emitManifest, regenerateTypes } from "./utils";
 import { ModuleGenerator } from "../generators/generator";
 import { ViteAdapter } from "./vite-adapter";
+import { generateToDisk } from "../utils/disk-writer";
 
 /**
- * Emits production chunks for all module files.
- * This is called from the `buildStart` hook.
+ * Runs build start tasks: regenerates types.
+ * Chunk emission is handled by disk-writer in closeBundle.
  *
  * @param adapter - The Vite adapter.
  * @param config - The plugin configuration.
@@ -23,33 +25,14 @@ export async function runBuildStart(
   }
 
   logger.info("Running build start tasks...");
-
   logger.debug("Regenerating types...");
-  await regenerateTypes(config, generators); // Pass config and generators
-
-  const emit = adapter.emitFile; // Use adapter.emitFile
-  logger.debug("Collecting module files for chunk emission...");
-  const moduleFiles = await Promise.all(
-    generators.map(async (g) => g.modules({ production: true })),
-  ).then((files) => files.flat());
-
-  logger.debug(`Found ${moduleFiles.length} module files to emit as chunks.`);
-  moduleFiles.forEach((element) => {
-    emit({
-      type: "chunk",
-      id: element.file,
-      preserveSignature: "exports-only",
-      fileName: element.uri.replace(/^\/+/g, ""),
-    });
-    logger.debug(
-      `Emitted chunk for file: ${element.file} with fileName: ${element.uri.replace(/^\/+/g, "")}`,
-    );
-  });
+  await regenerateTypes(config, generators);
   logger.info("Build start tasks completed.");
 }
 
 /**
- * Finalizes the build by generating sitemap and manifest.
+ * Finalizes the build by writing generated modules to dist/generated/,
+ * then generating sitemap and manifest.
  * This is called from the `closeBundle` hook.
  *
  * @param adapter - The Vite adapter.
@@ -63,12 +46,29 @@ export async function runCloseBundle(
   runtime: PluginRuntime,
   generators: ModuleGenerator[],
 ) {
-  const { logger } = config;
+  const { logger, resolvedConfig } = config;
   logger.info("Running close bundle tasks...");
+
+  // Write generated modules to dist/generated/ with deterministic filenames
+  const buildOutputDir = path.join(
+    resolvedConfig.build.outDir,
+    "generated",
+  );
+  logger.debug("Writing generated modules to disk...");
+  const groupNames = await generateToDisk(
+    buildOutputDir,
+    generators,
+    { production: true },
+    logger,
+  );
+  logger.info(
+    `Wrote ${groupNames.length} generated module(s) to ${buildOutputDir}`,
+  );
+
   logger.debug("Emitting manifest...");
-  await emitManifest(config); // Pass config
+  await emitManifest(config);
   logger.debug("Emitting sitemap...");
-  await emitSitemap(adapter, config, generators); // Pass adapter, config, and generators
+  await emitSitemap(adapter, config, generators);
   logger.info("Close bundle tasks completed.");
 }
 

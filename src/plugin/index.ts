@@ -1,11 +1,12 @@
 import type { Plugin, ViteDevServer } from "vite";
+import * as path from "path";
 import { createModuleGenerator } from "../generators/generator";
 import { PluginOptions } from "../types/plugin";
 import { createLogger } from "../utils/logger";
 import { NameIndex } from "../utils/name-index";
+import { generateToDisk } from "../utils/disk-writer";
 import { runBuildStart, runCloseBundle, transformHtml } from "./build";
 import { PluginConfig, PluginRuntime } from "./types";
-import { loadVirtualModule, resolveVirtualId } from "./virtual-modules";
 import { createViteAdapter } from "./vite-adapter";
 import { initializeDevServer } from "./server";
 import { getRoot } from "../utils/root";
@@ -51,19 +52,6 @@ export function createAutoloadPlugin(options: PluginOptions): Plugin {
         (err) => {
           pluginConfig.logger.error("Failed to initialize dev server:", err);
         },
-      );
-    },
-
-    resolveId(id) {
-      return resolveVirtualId(id, pluginConfig.nameIndex);
-    },
-
-    async load(id) {
-      return await loadVirtualModule(
-        id,
-        pluginConfig.nameIndex,
-        pluginConfig.resolvedConfig.isProduction,
-        generators,
       );
     },
 
