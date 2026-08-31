@@ -55,6 +55,14 @@ export interface PluginOptions {
      * @default "src/generated"
      */
     outputDir?: string;
+    /**
+     * Import alias prefix that resolves to generated modules.
+     * In dev, Vite resolves these to disk files.
+     * In production, the plugin intercepts these and returns
+     * virtual modules with correct chunk imports.
+     * @example "@generated"
+     */
+    alias?: string;
   };
   /**
    * Configuration for defining and transforming various modules or collections of data.

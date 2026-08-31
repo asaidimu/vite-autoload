@@ -7,34 +7,40 @@ import type { BuildContext } from "../types/build";
 import { Logger } from "./logger";
 
 /**
- * Writes a single group's generated code to a .ts file on disk.
+ * Writes a single group's generated code to a file on disk.
+ * Uses .ts for dev, .js for production builds.
  */
 async function writeGroupFile(
   outputDir: string,
   groupName: string,
   code: string,
   logger: Logger,
+  isProduction: boolean,
 ): Promise<void> {
-  const filePath = path.join(outputDir, `${groupName}.ts`);
+  const ext = isProduction ? "js" : "ts";
+  const filePath = path.join(outputDir, `${groupName}.${ext}`);
   await writeFileIfChanged(filePath, code, logger);
 }
 
 /**
- * Writes a barrel index.ts that re-exports all generated groups.
+ * Writes a barrel index file that re-exports all generated groups.
+ * Uses .ts for dev, .js for production builds.
  */
 async function writeIndexFile(
   outputDir: string,
   groupNames: string[],
   logger: Logger,
+  isProduction: boolean,
 ): Promise<void> {
+  const ext = isProduction ? "js" : "ts";
   const lines = groupNames.map((name) => `export * from './${name}';`);
   const code = lines.join("\n") + "\n";
-  const filePath = path.join(outputDir, "index.ts");
+  const filePath = path.join(outputDir, `index.${ext}`);
   await writeFileIfChanged(filePath, code, logger);
 }
 
 /**
- * Removes .ts files in outputDir that no longer correspond to a group.
+ * Removes stale generated files in outputDir that no longer correspond to a group.
  */
 async function cleanStaleModules(
   outputDir: string,
@@ -50,8 +56,8 @@ async function cleanStaleModules(
 
   const validNames = new Set([...currentGroupNames, "index"]);
   for (const entry of entries) {
-    if (!entry.endsWith(".ts")) continue;
-    const name = entry.replace(/\.ts$/, "");
+    if (!entry.endsWith(".ts") && !entry.endsWith(".js")) continue;
+    const name = entry.replace(/\.(ts|js)$/, "");
     if (!validNames.has(name)) {
       const stalePath = path.join(outputDir, entry);
       logger.debug(`Removing stale generated file: ${stalePath}`);
@@ -89,11 +95,11 @@ async function writeFileIfChanged(
 }
 
 /**
- * Generates code for all groups and writes them as separate .ts files to disk.
+ * Generates code for all groups and writes them as separate files to disk.
+ * In dev mode, writes .ts files. In production, writes .js files.
  *
  * @param outputDir - Absolute path to the output directory.
  * @param generators - The module generators.
- * @param componentNames - Map of component index to component name.
  * @param context - The build context.
  * @param logger - Logger instance.
  * @returns Array of group names that were written.
@@ -105,6 +111,7 @@ export async function generateToDisk(
   logger: Logger,
 ): Promise<string[]> {
   const allGroupNames: string[] = [];
+  const isProduction = context.production;
 
   await fs.mkdir(outputDir, { recursive: true });
 
@@ -128,12 +135,12 @@ export async function generateToDisk(
       const defaultExport = generateDefaultExport([groupName], logger);
       const fullCode = moduleCode + defaultExport + "\n";
 
-      await writeGroupFile(outputDir, groupName, fullCode, logger);
+      await writeGroupFile(outputDir, groupName, fullCode, logger, isProduction);
       allGroupNames.push(groupName);
     }
   }
 
-  await writeIndexFile(outputDir, allGroupNames, logger);
+  await writeIndexFile(outputDir, allGroupNames, logger, isProduction);
   await cleanStaleModules(outputDir, allGroupNames, logger);
 
   return allGroupNames;

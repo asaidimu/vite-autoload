@@ -19,6 +19,8 @@ export interface PluginConfig {
  */
 export interface PluginRuntime {
   server?: ViteDevServer;
+  /** Maps source file paths to their emitted chunk filenames. */
+  sourceToChunk?: Map<string, string>;
 }
 
 /**
